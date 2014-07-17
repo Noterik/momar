@@ -1,0 +1,34 @@
+10
+
+dir
+586
+svn+ssh://c6.noterik.com/usr/local/svn/repos/Springfield2.0/momar/WebContent
+svn+ssh://c6.noterik.com/usr/local/svn/repos/Springfield2.0
+
+
+
+2012-10-29T12:54:37.370504Z
+82
+daniel
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+c99bb546-0329-4785-bc28-10ad105c61f0
+
+WEB-INF
+dir
+
+conf
+dir
+

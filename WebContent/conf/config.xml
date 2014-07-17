@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+	<!-- decision engine -->
+	
+	<!-- distributed for live -->
+	<!-- live -->
+	<entry key="decision-engine">com.noterik.springfield.momar.queue.dist.DistributedDecisionEngine</entry>
+	
+	<!-- live -->
+	<!--<entry key="decision-engine">com.noterik.springfield.momar.queue.dist.SimpleDecisionEngine</entry> -->
+	
+	<!-- development -->
+	<!--<entry key="decision-engine">com.noterik.springfield.momar.queue.dist.TakeAllDecisionEngine</entry> -->
+    
+	<!-- number of worker threads -->
+	<entry key="number-of-workers">1</entry>
+	
+	<!-- default logging level -->
+    <entry key="default-log-level">info</entry>
+	
+	<!-- ffmpeg path -->
+    <entry key="ffmpeg-path"></entry>
+	
+	<!-- temporary directory -->
+    <entry key="temporary-directory">/springfield/momar/tmp</entry>
+    
+    <!-- batch files path -->
+    <entry key="batchFilesPath">/springfield/momar/batchfiles</entry>
+    
+    <!-- batch files extension -->
+    <entry key="batchFilesExtension">.bat</entry>
+</properties>
