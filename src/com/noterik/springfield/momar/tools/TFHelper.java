@@ -28,14 +28,19 @@ public class TFHelper {
 	public static boolean isLocalJob(Job job) {
 		 String[] mounts = job.getProperty("mount").split(",");
 		 for(int i =0; i < mounts.length ; i++) {
-		   String name = mounts[i];
-		   MountProperties minfo = LazyHomer.getMountProperties(name);
-		   System.out.println("mount ip = "+minfo.getHostname()+" this momar ip "+LazyHomer.myip);
-		   if (minfo.getHostname().equals(LazyHomer.myip)) {
-			   return true;
-		   }
-		 }
-		 
+			 String name = mounts[i];
+			 MountProperties minfo = LazyHomer.getMountProperties(name);
+		   
+			 if (minfo == null) {
+				 System.out.println("Mount properties not set for Momar for mount "+name);
+				 return false;
+			 }		   
+			 
+			 System.out.println("mount ip = "+minfo.getHostname()+" this momar ip "+LazyHomer.myip);		   
+			 if (minfo.getHostname().equals(LazyHomer.myip)) {
+				 return true;
+			 }
+		}		 
 		return false;
 	}
 

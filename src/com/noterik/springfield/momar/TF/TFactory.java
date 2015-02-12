@@ -175,6 +175,13 @@ public class TFactory {
 				String[] cmdArray = new String[] {batchFilesPath+File.separator+batchfile, ffmpegPath+File.separator, inputFile, job.getProperty("wantedwidth"), job.getProperty("wantedheight"), job.getProperty("wantedbitrate"), job.getProperty("wantedframerate"), job.getProperty("wantedaudiobitrate"), outputDir, job.getProperty("extension"),tempPath,job.getId()};
 				LOG.debug("command: "+batchFilesPath+File.separator+batchfile+" "+ffmpegPath+File.separator+" "+inputFile+" "+job.getProperty("wantedwidth")+" "+job.getProperty("wantedheight")+" "+job.getProperty("wantedbitrate")+" "+job.getProperty("wantedframerate")+" "+job.getProperty("wantedaudiobitrate")+" "+outputDir+" "+job.getProperty("extension")+" "+tempPath+" "+job.getId());
 				
+				File bFile = new File(batchFilesPath+File.separator+batchfile);
+				if (!bFile.exists()) {
+					System.out.println("Batch file not found "+batchFilesPath+File.separator+batchfile);
+					job.setError("Error", "Transcoding Failed MP4, batch file not found");
+					return false;
+				}
+				
 				this.commandRunner(cmdArray);
 			
 				if(new File(outputDir + "raw." + job.getProperty("extension")).isFile()){

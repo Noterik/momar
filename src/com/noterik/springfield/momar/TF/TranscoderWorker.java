@@ -158,7 +158,12 @@ public class TranscoderWorker implements MargeObserver {
 			LazyHomer.sendRequest("PUT", rawUri + "/properties/status", "failed", "text/xml");
 		}
 		//Check if an additional script is provided to run after the job finished
-		MountProperties mp = LazyHomer.getMountProperties(cJob.getProperty("mount"));
+		String mount = cJob.getProperty("mount");
+		if (mount.indexOf(",") > -1) {
+			mount = mount.substring(0,mount.indexOf(","));
+		}
+		
+		MountProperties mp = LazyHomer.getMountProperties(mount);
 		String jobFinished = mp.getJobFinished();
 		if (jobFinished != null && !jobFinished.equals("")) {
 			LOG.debug("About to run script "+jobFinished);
