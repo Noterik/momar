@@ -152,9 +152,34 @@ public class Job {
 			// determine original
 			Node oNode = doc.selectSingleNode("//rawvideo/properties[original='true']");
 			if(oNode!=null) {
-				// construct original path and filename
-				original = parentURI + "/rawvideo/" + oNode.getParent().valueOf("@id");
-				originalFilename = "raw." + oNode.valueOf("extension");
+				String extension = oNode.valueOf("extension");
+				String filename = oNode.valueOf("filename");
+
+				if (extension.toLowerCase().equals("raw")) {
+					//we can't convert raw formats, get another raw video if possible and use that one
+					List<Node> raws = doc.selectNodes("//rawvideo/properties[extension!='raw']");
+					for (Iterator<Node> it = raws.iterator(); it.hasNext(); ) {
+						Node raw = it.next();
+						useraw = raw.getParent().valueOf("@id");
+					}			
+				} 
+
+				if (filename != null && !filename.equals("")) {
+					//check if filename was set, use that
+					original = filename.substring(0, filename.lastIndexOf("/")+1);
+					originalFilename = filename.substring(filename.lastIndexOf("/")+1);
+				} else {
+					// construct original path and filename
+					original = parentURI + "/rawvideo/" + oNode.getParent().valueOf("@id");
+					originalFilename = "raw." + extension;
+				}
+				 
+				//set output uri if this was set in the requested raw video
+				if (properties.containsKey("filename") && !properties.get("filename").equals("")) {
+					String requestedFilename = properties.get("filename");				
+					outputURI = requestedFilename.substring(0, requestedFilename.lastIndexOf("/")+1);
+					outputFilename = requestedFilename.substring(requestedFilename.lastIndexOf("/")+1);
+				} 				
 			} else {
 				oNode = doc.selectSingleNode("//rawvideo/properties[contains(original,'/domain/')]");
 				if (oNode != null) {
@@ -180,15 +205,24 @@ public class Job {
 			} else {
 				Node inpNode = doc.selectSingleNode("//rawvideo[@id='"+useraw+"']/properties");
 				if(inpNode!=null) {
-					// construct original path and filename
-					inputURI = parentURI + "/rawvideo/" + inpNode.getParent().valueOf("@id");
-					inputFilename = "raw." + inpNode.valueOf("extension");
+					String filename = inpNode.valueOf("filename");
+					
+					if (filename != null && !filename.equals("")) {
+						//check if filename was set, use that
+						inputURI = filename.substring(0, filename.lastIndexOf("/")+1);
+						inputFilename = filename.substring(filename.lastIndexOf("/")+1);
+					} else {
+						// construct original path and filename
+						inputURI = parentURI + "/rawvideo/" + inpNode.getParent().valueOf("@id");
+						inputFilename = "raw." + inpNode.valueOf("extension");
+					}
 				}
 			}
 		} catch(Exception e) {
 			LOG.error("",e);
 		}
 		
+		System.out.println("Result of parsing parent - original: "+original+", originalFilename: "+originalFilename+", inputURI: "+inputURI+", inputFilename: "+inputFilename);
 		LOG.debug("Result of parsing parent - original: "+original+", originalFilename: "+originalFilename+", inputURI: "+inputURI+", inputFilename: "+inputFilename);
 
 	}

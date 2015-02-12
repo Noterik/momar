@@ -166,7 +166,6 @@ public class TFactory {
 					(new File(outputDir)).mkdirs();
 				}
 			}
-
 			
 			// custom batch file 
 			if (job.getProperty("batchfile") != null) {
