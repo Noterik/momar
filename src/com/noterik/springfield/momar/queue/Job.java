@@ -155,9 +155,9 @@ public class Job {
 				String extension = oNode.valueOf("extension");
 				String filename = oNode.valueOf("filename");
 
-				if (extension.toLowerCase().equals("raw")) {
+				if (extension.toLowerCase().equals("raw") || extension.toLowerCase().equals("cine")) {
 					//we can't convert raw formats, get another raw video if possible and use that one
-					List<Node> raws = doc.selectNodes("//rawvideo/properties[extension!='raw']");
+					List<Node> raws = doc.selectNodes("//rawvideo/properties[extension!='raw' and extension!='cine']");
 					for (Iterator<Node> it = raws.iterator(); it.hasNext(); ) {
 						Node raw = it.next();
 						useraw = raw.getParent().valueOf("@id");
