@@ -12,6 +12,8 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Node;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.springfield.momar.MomarServer;
 import com.noterik.springfield.momar.homer.*;
@@ -122,7 +124,9 @@ public class EasyFetcher extends Thread {
 		
 		LOG.debug("user id = "+datasetId+" title = "+datasetTitle+" description = "+datasetDescription);
 	
-		String response = LazyHomer.sendRequest("GET","/domain/"+DOMAIN+"/user/"+datasetId, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get("/domain/"+DOMAIN+"/user/"+datasetId, null, null);
 		
 		//parse response
 		try {
@@ -134,7 +138,7 @@ public class EasyFetcher extends Thread {
 					//user should not exist
 					if (!nodeExists) {
 						String body = "<fsxml><properties><title>"+FsEncoding.encode(datasetTitle)+"</title><description>"+FsEncoding.encode(datasetDescription)+"</description></properties></fsxml>";
-						LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/properties", body, "text/xml");
+						smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/properties", body, "text/xml");
 					} else {
 						LOG.error("dataset could not be added, exists already");
 					}
@@ -144,7 +148,7 @@ public class EasyFetcher extends Thread {
 					//user should exist
 					if (nodeExists) {
 						String body = "<fsxml><properties><title>"+FsEncoding.encode(datasetTitle)+"</title><description>"+FsEncoding.encode(datasetDescription)+"</description></properties></fsxml>";
-						LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/properties", body, "text/xml");
+						smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/properties", body, "text/xml");
 					} else {
 						LOG.error("dataset could not be updated, does not exist");
 					}
@@ -186,7 +190,9 @@ public class EasyFetcher extends Thread {
 		
 		LOG.debug("collection id = "+projectId+" action = "+projectAction+" title = "+projectTitle+" description = "+projectDescription);
 		
-		String response = LazyHomer.sendRequest("GET","/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get("/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId, null, null);
 		
 		//parse response
 		try {
@@ -198,7 +204,7 @@ public class EasyFetcher extends Thread {
 					//collection should not exist
 					if (!nodeExists) {
 						String body = "<fsxml><properties><title>"+FsEncoding.encode(projectTitle)+"</title><description>"+FsEncoding.encode(projectDescription)+"</description></properties></fsxml>";
-						LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/properties", body, "text/xml");
+						smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/properties", body, "text/xml");
 					} else {
 						LOG.error("dataset could not be added, exists already");
 					}
@@ -208,7 +214,7 @@ public class EasyFetcher extends Thread {
 					//collection should exist
 					if (nodeExists) {
 						String body = "<fsxml><properties><title>"+FsEncoding.encode(projectTitle)+"</title><description>"+FsEncoding.encode(projectDescription)+"</description></properties></fsxml>";
-						LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/properties", body, "text/xml");
+						smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/properties", body, "text/xml");
 					} else {
 						LOG.error("dataset could not be updated, does not exist");
 					}
@@ -251,7 +257,9 @@ public class EasyFetcher extends Thread {
 
 		LOG.debug("presentation id = "+presentationId+" access level = "+confinement+" title = "+presentationTitle+" description = "+presentationDescription);
 		
-		String response = LazyHomer.sendRequest("GET","/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get("/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId, null, null);
 		
 		//parse response
 		try {
@@ -263,7 +271,7 @@ public class EasyFetcher extends Thread {
 					//presentation should not exist					
 					if (!nodeExists) {
 						String body = "<fsxml><properties><title>"+FsEncoding.encode(presentationTitle)+"</title><description>"+FsEncoding.encode(presentationDescription)+"</description></properties><videoplaylist id='1'><properties/></videoplaylist></fsxml>";
-						String resp = LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId+"/properties", body, "text/xml");
+						String resp = smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId+"/properties", body, "text/xml");
 							
 						//make refer in collection to presentation
 						Document respDoc = DocumentHelper.parseText(resp);
@@ -271,7 +279,7 @@ public class EasyFetcher extends Thread {
 						LOG.debug("presentation uri = "+pRefer);
 						String attributesXml = "<fsxml><attributes><referid>"+pRefer+"</referid></attributes></fsxml>";
 						//post to add
-						String respo = LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/presentation/"+presentationId+"/attributes", attributesXml, "text/xml");
+						String respo = smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/presentation/"+presentationId+"/attributes", attributesXml, "text/xml");
 						LOG.debug("collection presentation refer response = "+respo);
 					} else {
 						LOG.error("dataset could not be added, exists already");
@@ -282,7 +290,7 @@ public class EasyFetcher extends Thread {
 					//presentation should exist
 					if (nodeExists) {
 						String body = "<fsxml><properties><title>"+FsEncoding.encode(presentationTitle)+"</title><description>"+FsEncoding.encode(presentationDescription)+"</description></properties></fsxml>";
-						String resp3 = LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId+"/properties", body, "text/xml");
+						String resp3 = smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId+"/properties", body, "text/xml");
 						LOG.debug("updating presentation result = "+resp3);
 					} else {
 						LOG.error("dataset could not be updated, does not exist");
@@ -327,7 +335,9 @@ public class EasyFetcher extends Thread {
 		LOG.debug("video id = "+videoId+" video format = "+format+" video filename = "+filename);
 		
 		//handle video
-		String response = LazyHomer.sendRequest("GET","/domain/"+DOMAIN+"/user/"+datasetId+"/video/"+videoId, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get("/domain/"+DOMAIN+"/user/"+datasetId+"/video/"+videoId, null, null);
 		
 		//parse response
 		try {
@@ -338,7 +348,7 @@ public class EasyFetcher extends Thread {
 				//video should not exist				
 				if (!nodeExists) {
 					String body = "<fsxml><properties/></fsxml>";
-					String resp = LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/video/"+videoId+"/properties", body, "text/xml");
+					String resp = smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/video/"+videoId+"/properties", body, "text/xml");
 					LOG.debug("add video response = "+resp);
 					
 					Document respDoc = DocumentHelper.parseText(resp);
@@ -346,10 +356,10 @@ public class EasyFetcher extends Thread {
 					LOG.debug("video location = "+vRefer);
 					String attributesXml = "<fsxml><attributes><referid>"+vRefer+"</referid></attributes></fsxml>";
 					//make refer in presentation videoplaylist to this video
-					String resp1 = LazyHomer.sendRequest("PUT", "/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId+"/videoplaylist/1/video/1/attributes", attributesXml, "text/xml");
+					String resp1 = smithers.put("/domain/"+DOMAIN+"/user/"+datasetId+"/presentation/"+presentationId+"/videoplaylist/1/video/1/attributes", attributesXml, "text/xml");
 					LOG.debug("presentation videoplaylist refer = "+resp1);
 					//make refer in collection to this video
-					String resp2 = LazyHomer.sendRequest("POST", "/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/video", attributesXml, "text/xml");
+					String resp2 = smithers.post("/domain/"+DOMAIN+"/user/"+datasetId+"/collection/"+projectId+"/video", attributesXml, "text/xml");
 					LOG.debug("collection video refer  ="+resp2);
 				} else {
 						LOG.error("dataset could not be added, exists already");

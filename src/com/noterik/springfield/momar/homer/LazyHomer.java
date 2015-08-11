@@ -16,9 +16,10 @@ import java.util.Properties;
 
 import org.apache.log4j.*;
 import org.dom4j.*;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.springfield.momar.*;
-import com.noterik.springfield.tools.*;
 
 public class LazyHomer implements MargeObserver {	
 	private static Logger LOG = Logger.getLogger(LazyHomer.class);
@@ -28,7 +29,11 @@ public class LazyHomer implements MargeObserver {
 	private static enum loglevels { all,info,warn,debug,trace,error,fatal,off; }
 	public static String myip = "unknown";
 	private static int port = -1;
+	private static int bart_port = 8080;
+	private static int smithers_port = 8080;
+	public static boolean local = true;
 	static String group = "224.0.0.0";
+	static String role = "production";
 	static int ttl = 1;
 	static boolean noreply = true;
 	static LazyMarge marge;
@@ -56,9 +61,10 @@ public class LazyHomer implements MargeObserver {
 			InetAddress mip=InetAddress.getLocalHost();
 			myip = ""+mip.getHostAddress();
 		}catch (Exception e){
-			System.out.println("Exception ="+e.getMessage());
+			LOG.error("Exception ="+e.getMessage());
 		}
-		LOG.info("Momar init service name = momar on ipnumber = "+myip+" on port "+port);
+		LOG.info("Momar init service name = momar on ipnumber = "+myip);
+		System.out.println("Momar init service name = momar on ipnumber = "+myip+" on marge port "+port);
 		marge = new LazyMarge();
 		
 		// lets watch for changes in the service nodes in smithers
@@ -67,10 +73,15 @@ public class LazyHomer implements MargeObserver {
 		new DiscoveryThread();	
 	}
 	
-	public static void addSmithers(String ipnumber,String port,String mport) {
+	public static void addSmithers(String ipnumber,String port,String mport,String role) {
 		int oldsize = smithers.size();
 		if (!(""+LazyHomer.getPort()).equals(mport)) {
-			System.out.println("EXTREEM WARNING CLUSTER COLLISION ("+LazyHomer.getPort()+") "+ipnumber+":"+port+":"+mport);
+			System.out.println("MOMAR EXTREME WARNING CLUSTER COLLISION ("+LazyHomer.getPort()+") "+ipnumber+":"+port+":"+mport);
+			return;
+		}
+		
+		if (!role.equals(getRole())) {
+			System.out.println("nelson : Ignored this smithers ("+ipnumber+") its "+role+" and not "+getRole()+" like us");
 			return;
 		}
 		
@@ -82,16 +93,15 @@ public class LazyHomer implements MargeObserver {
 			sp.setPort(port);
 			sp.setAlive(true); // since talking its alive 
 			noreply = false; // stop asking (minimum of 60 sec, delayed)
-			LOG.info("Lisa found smithers at = "+ipnumber+" port="+port+" multicast="+mport);
-			System.out.println("Lisa found smithers at = "+ipnumber+" port="+port+" multicast="+mport);
+			LOG.info("Momar found smithers at = "+ipnumber+" port="+port+" multicast="+mport);
+			System.out.println("Momar found smithers at = "+ipnumber+" port="+port+" multicast="+mport);
 		} else {
 			if (!sp.isAlive()) {
 				sp.setAlive(true); // since talking its alive again !
-				LOG.info("recovered smithers at = "+ipnumber);
+				LOG.info("momar recovered smithers at = "+ipnumber);
 			}
 		}
 		
-
 		// so check if we are known 
 		if (oldsize==0 && ins.checkKnown()) {
 			
@@ -101,21 +111,22 @@ public class LazyHomer implements MargeObserver {
 			if (mp!=null && mp.getStatus().equals("on")) {
 				if (serv==null) serv = new MomarServer();
 				if (!serv.isRunning()) {
-					LOG.info("This Lisa will be started (on startup)");
+					LOG.info("This Momar will be started (on startup)="+rootPath);
+					serv.setRootPath(rootPath);
 					serv.init();
 				}
 			} else {
 				if (serv!=null && serv.isRunning()) {
 					serv.destroy();
 				} else {
-					LOG.info("This Lisa is not turned on, use smithers todo this for ip "+myip);
+					LOG.info("This Momar is not turned on, use smithers todo this for ip "+myip);
 				}
 			}
 		}
 		if (oldsize>0) {
 			// we already had one so lets see if we need to switch to
 			// a better one.
-			getDifferentSmithers();
+			//getDifferentSmithers();
 		}
 	}
 	
@@ -137,44 +148,13 @@ public class LazyHomer implements MargeObserver {
 		return momars.size();
 	}
 	
-	public static MountProperties getMountProperties(String name) {
-		if (mounts==null) readMounts();
-		return mounts.get(name);
-	}
-	
-	private static void readMounts() {
-		mounts = new HashMap<String, MountProperties>();
-		String mountslist = LazyHomer.sendRequest("GET","/domain/internal/service/momar/mounts",null,null);
-		try { 
-			Document result = DocumentHelper.parseText(mountslist);
-			for(Iterator<Node> iter = result.getRootElement().nodeIterator(); iter.hasNext(); ) {
-				Element child = (Element)iter.next();
-				if (!child.getName().equals("properties")) {
-					String name = child.attributeValue("id");
-					String hostname = child.selectSingleNode("properties/hostname").getText();
-					String path = child.selectSingleNode("properties/path").getText();
-					String account = child.selectSingleNode("properties/account") == null ? "" : child.selectSingleNode("properties/account").getText();
-					String password = child.selectSingleNode("properties/password") == null ? "" : child.selectSingleNode("properties/password").getText();
-					String protocol = child.selectSingleNode("properties/protocol") == null ? "" : child.selectSingleNode("properties/protocol").getText();
-					String jobFinished = child.selectSingleNode("properties/jobfinished") == null ? "" : child.selectSingleNode("properties/jobfinished").getText();
-					MountProperties mp = new MountProperties();
-					mp.setHostname(hostname);
-					mp.setPath(path);
-					mp.setAccount(account);
-					mp.setPassword(password);
-					mp.setProtocol(protocol);
-					mp.setJobFinished(jobFinished);
-					mounts.put(name, mp);
-				}
-			}
-		} catch (DocumentException e) {
-			LOG.info("LazyHomer: "+e.getMessage());
-		}
-	}
-	
 	private Boolean checkKnown() {
 		String xml = "<fsxml><properties><depth>1</depth></properties></fsxml>";
-		String nodes = LazyHomer.sendRequest("GET","/domain/internal/service/momar/nodes",xml,"text/xml");
+		//String nodes = LazyHomer.sendRequest("GET","/domain/internal/service/momar/nodes",xml,"text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return false;
+		String nodes = smithers.get("/domain/internal/service/momar/nodes",xml,"text/xml");
+		
 		boolean iamok = false;
 
 		try { 
@@ -272,7 +252,8 @@ public class LazyHomer implements MargeObserver {
 	
 		        	}
 		        	newbody+="</properties></nodes></fsxml>";	
-					LazyHomer.sendRequest("PUT","/domain/internal/service/momar/properties",newbody,"text/xml");
+		        	smithers.put("/domain/internal/service/momar/properties",newbody,"text/xml");
+		        	//LazyHomer.sendRequest("PUT","/domain/internal/service/momar/properties",newbody,"text/xml");
 				}
 			}
 		} catch (Exception e) {
@@ -281,13 +262,54 @@ public class LazyHomer implements MargeObserver {
 		}
 		return iamok;
 	}
-	
+
 	public static void setLastSeen() {
 		Long value = new Date().getTime();
-		LazyHomer.sendRequest("PUT", "/domain/internal/service/momar/nodes/"+myip+"/properties/lastseen", ""+value, "text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.put("/domain/internal/service/momar/nodes/"+myip+"/properties/lastseen", ""+value, "text/xml");
 	}
 	
+	private void initConfig() {
+		System.out.println("Momar: initializing configuration.");
+		
+		// properties
+		Properties props = new Properties();
+		
+		// new loader to load from disk instead of war file
+		String configfilename = "/springfield/homer/config.xml";
+		if (isWindows()) {
+			configfilename = "c:\\springfield\\homer\\config.xml";
+		}
+		
+		// load from file
+		try {
+			System.out.println("INFO: Loading config file from load : "+configfilename);
+			File file = new File(configfilename);
 
+			if (file.exists()) {
+				props.loadFromXML(new BufferedInputStream(new FileInputStream(file)));
+			} else { 
+				System.out.println("FATAL: Could not load config "+configfilename);
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		// only get the marge communication port unless we are a smithers
+		port = Integer.parseInt(props.getProperty("marge-port"));
+		bart_port = Integer.parseInt(props.getProperty("default-bart-port"));
+		smithers_port = Integer.parseInt(props.getProperty("default-smithers-port"));
+		role = props.getProperty("role");
+		if (role==null) role = "production";
+		System.out.println("SERVER ROLE="+role);
+	}
+	
+	public static String getRole() {
+		return role;
+	}
 	
 	public static void send(String method, String uri) {
 		try {
@@ -319,6 +341,10 @@ public class LazyHomer implements MargeObserver {
 		return "http://"+selectedsmithers.getIpNumber()+":"+selectedsmithers.getPort()+"/smithers2";
 	}
 	
+	public static int getPort() {
+		return port;
+	}
+	
 	public void remoteSignal(String from,String method,String url) {
 		if (url.indexOf("/smithers/downcheck")!=-1) {
 			for(Iterator<SmithersProperties> iter = smithers.values().iterator(); iter.hasNext(); ) {
@@ -330,26 +356,27 @@ public class LazyHomer implements MargeObserver {
 			}
 		} else {
 		// only one trigger is set for now so we know its for nodes :)
-		if (ins.checkKnown()) {
-			// we are verified (has a name other than unknown)		
-			MomarProperties mp = momars.get(myip);
-			if (serv==null) serv = new MomarServer();
-			if (mp!=null && mp.getStatus().equals("on")) {
-
-				if (!serv.isRunning()) { 
-					LOG.info("This momar will be started");
-					serv.init();
-				}
-				setLogLevel(mp.getDefaultLogLevel());
-			} else {
-				if (serv.isRunning()) {
-					LOG.info("This momar will be turned off");
-					serv.destroy();
+			if (ins.checkKnown()) {
+				// we are verified (has a name other than unknown)		
+				MomarProperties mp = momars.get(myip);
+				if (serv==null) serv = new MomarServer();
+				if (mp!=null && mp.getStatus().equals("on")) {
+	
+					if (!serv.isRunning()) { 
+						LOG.info("This momar will be started");
+						serv.setRootPath(rootPath);
+						serv.init();
+					}
+					setLogLevel(mp.getDefaultLogLevel());
 				} else {
-					LOG.info("This momar is not turned on, use smithers todo this for ip "+myip);
+					if (serv.isRunning()) {
+						LOG.info("This momar will be turned off");
+						serv.destroy();
+					} else {
+						LOG.info("This momar is not turned on, use smithers todo this for ip "+myip);
+					}
 				}
 			}
-		}
 		}
 	}
 	
@@ -368,15 +395,148 @@ public class LazyHomer implements MargeObserver {
 		return (os.indexOf("nix") >= 0 || os.indexOf("nux") >= 0);
  	}
 	
-	public synchronized static String sendRequest(String method,String url,String body,String contentType) {
+	/**
+	 * get root path
+	 */
+	public static String getRootPath() {
+		return rootPath;
+	}
+	
+	/**
+	 * Initializes logger
+	 */
+    private void initLogger() {    	 
+    	System.out.println("Initializing logging.");
+    	
+    	// get logging path
+    	String logPath = LazyHomer.getRootPath().substring(0,LazyHomer.getRootPath().indexOf("webapps"));
+		logPath += "logs/momar/momar.log";	
+		
+		try {
+			// default layout
+			Layout layout = new PatternLayout("%-5p: %d{yyyy-MM-dd HH:mm:ss} %c %x - %m%n");
+			
+			// rolling file appender
+			DailyRollingFileAppender appender1 = new DailyRollingFileAppender(layout,logPath,"'.'yyyy-MM-dd");
+			BasicConfigurator.configure(appender1);
+			
+			// console appender 
+			ConsoleAppender appender2 = new ConsoleAppender(layout);
+			BasicConfigurator.configure(appender2);
+		}
+		catch(IOException e) {
+			System.out.println("MomarServer got an exception while initializing the logger.");
+			e.printStackTrace();
+		}
+		
+		Level logLevel = Level.INFO;
+		Logger.getRootLogger().setLevel(Level.OFF);
+		Logger.getLogger(PACKAGE_ROOT).setLevel(logLevel);
+		LOG.info("logging level: " + logLevel);
+		
+		LOG.info("Initializing logging done.");
+    }
+    
+    private static void setLogLevel(String level) {
+		Level logLevel = Level.INFO;
+		Level oldlevel = Logger.getLogger(PACKAGE_ROOT).getLevel();
+		switch (loglevels.valueOf(level)) {
+			case all : logLevel = Level.ALL;break;
+			case info : logLevel = Level.INFO;break;
+			case warn : logLevel = Level.WARN;break;
+			case debug : logLevel = Level.DEBUG;break;
+			case trace : logLevel = Level.TRACE;break;
+			case error: logLevel = Level.ERROR;break;
+			case fatal: logLevel = Level.FATAL;break;
+			case off: logLevel = Level.OFF;break;
+		}
+		if (logLevel.toInt()!=oldlevel.toInt()) {
+			Logger.getLogger(PACKAGE_ROOT).setLevel(logLevel);
+			LOG.info("logging level: " + logLevel);
+		}
+	}
+	
+	public static MountProperties getMountProperties(String name) {
+		if (mounts==null) readMounts();
+		return mounts.get(name);
+	}
+	
+	private static void readMounts() {
+		mounts = new HashMap<String, MountProperties>();
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String mountslist = smithers.get("/domain/internal/service/momar/mounts",null,null);
+		//String mountslist = LazyHomer.sendRequest("GET","/domain/internal/service/momar/mounts",null,null);
+		try { 
+			Document result = DocumentHelper.parseText(mountslist);
+			for(Iterator<Node> iter = result.getRootElement().nodeIterator(); iter.hasNext(); ) {
+				Element child = (Element)iter.next();
+				if (!child.getName().equals("properties")) {
+					String name = child.attributeValue("id");
+					String hostname = child.selectSingleNode("properties/hostname").getText();
+					String path = child.selectSingleNode("properties/path").getText();
+					String account = child.selectSingleNode("properties/account") == null ? "" : child.selectSingleNode("properties/account").getText();
+					String password = child.selectSingleNode("properties/password") == null ? "" : child.selectSingleNode("properties/password").getText();
+					String protocol = child.selectSingleNode("properties/protocol") == null ? "" : child.selectSingleNode("properties/protocol").getText();
+					String jobFinished = child.selectSingleNode("properties/jobfinished") == null ? "" : child.selectSingleNode("properties/jobfinished").getText();
+					MountProperties mp = new MountProperties();
+					mp.setHostname(hostname);
+					mp.setPath(path);
+					mp.setAccount(account);
+					mp.setPassword(password);
+					mp.setProtocol(protocol);
+					mp.setJobFinished(jobFinished);
+					mounts.put(name, mp);
+				}
+			}
+		} catch (DocumentException e) {
+			LOG.info("LazyHomer: "+e.getMessage());
+		}
+	}
+	
+	/**
+     * Shutdown
+     */
+	public static void destroy() {
+		// destroy timer
+		if (marge!=null) marge.destroy();
+	}
+	
+	private class DiscoveryThread extends Thread {
+	    DiscoveryThread() {
+	      super("dthread");
+	      start();
+	    }
+
+	    public void run() {
+	     int counter = 0;
+	      while (LazyHomer.noreply || counter<10) {
+	    	if (counter>4 && LazyHomer.noreply) LOG.info("Still looking for smithers on multicast port "+port+" ("+LazyHomer.noreply+")");
+	    	LazyHomer.send("INFO","/domain/internal/service/getname");
+	        try {
+	          sleep(500+(counter*100));
+	          counter++;
+	        } catch (InterruptedException e) {
+	          throw new RuntimeException(e);
+	        }
+	      }
+	      LOG.info("Stopped looking for new smithers");
+	    }
+	}
+
+
+	/*public synchronized static String sendRequest(String method,String url,String body,String contentType) {
 		String fullurl = getSmithersUrl()+url;
 		String result = null;
 		boolean validresult = true;
 		
 		// first try 
 		try {
-			result = HttpHelper.sendRequest(method, fullurl, body, contentType);
-		//	System.out.println("FULLURL="+fullurl+" result="+result);
+			ServiceInterface smithers = ServiceManager.getService("smithers");
+			if (smithers==null) return result;
+			result = smithers.get(fullurl, body, contentType);
+			//result = HttpHelper.sendRequest(method, fullurl, body, contentType).toString();
+			//	System.out.println("FULLURL="+fullurl+" result="+result);
 			if (result.indexOf("<?xml")==-1) {
 				LOG.error("FAIL TYPE ONE ("+fullurl+")");
 				LOG.error("XML="+result);
@@ -399,7 +559,10 @@ public class LazyHomer implements MargeObserver {
 			getDifferentSmithers();
 			fullurl = getSmithersUrl()+url;
 			try {
-				result = HttpHelper.sendRequest(method, fullurl, body, contentType);
+				ServiceInterface smithers = ServiceManager.getService("smithers");
+				if (smithers==null) return result;
+				result = smithers.get(fullurl, body, contentType);
+				//result = HttpHelper.sendRequest(method, fullurl, body, contentType).toString();
 				if (result.indexOf("<?xml")==-1) {
 					LOG.error("FAIL TYPE THREE ("+fullurl+")");
 					LOG.error("XML="+result);
@@ -415,9 +578,9 @@ public class LazyHomer implements MargeObserver {
 		LOG.debug("VALID REQUEST RESULT ("+fullurl+") ");
 		
 		return result;
-	}
+	}*/
 	
-	private static void getDifferentSmithers() {
+	/*private static void getDifferentSmithers() {
 		LOG.debug("Request for new smithers");
 		// lets first find our prefered smithers.
 		MomarProperties mp = getMyMomarProperties();
@@ -465,137 +628,5 @@ public class LazyHomer implements MargeObserver {
 			}
 		}
 		selectedsmithers = winner;
-	}
-	
-	/**
-	 * get root path
-	 */
-	public static String getRootPath() {
-		return rootPath;
-	}
-	
-	private static void setLogLevel(String level) {
-		Level logLevel = Level.INFO;
-		Level oldlevel = Logger.getLogger(PACKAGE_ROOT).getLevel();
-		switch (loglevels.valueOf(level)) {
-			case all : logLevel = Level.ALL;break;
-			case info : logLevel = Level.INFO;break;
-			case warn : logLevel = Level.WARN;break;
-			case debug : logLevel = Level.DEBUG;break;
-			case trace : logLevel = Level.TRACE;break;
-			case error: logLevel = Level.ERROR;break;
-			case fatal: logLevel = Level.FATAL;break;
-			case off: logLevel = Level.OFF;break;
-		}
-		if (logLevel.toInt()!=oldlevel.toInt()) {
-			Logger.getLogger(PACKAGE_ROOT).setLevel(logLevel);
-			LOG.info("logging level: " + logLevel);
-		}
-	}
-	
- 
-	/**
-	 * Initializes logger
-	 */
-    private void initLogger() {    	 
-    	System.out.println("Initializing logging.");
-    	
-    	// get logging path
-    	String logPath = LazyHomer.getRootPath().substring(0,LazyHomer.getRootPath().indexOf("webapps"));
-		logPath += "logs/momar/momar.log";	
-		
-
-		
-		try {
-			// default layout
-			Layout layout = new PatternLayout("%-5p: %d{yyyy-MM-dd HH:mm:ss} %c %x - %m%n");
-			
-			// rolling file appender
-			DailyRollingFileAppender appender1 = new DailyRollingFileAppender(layout,logPath,"'.'yyyy-MM-dd");
-			BasicConfigurator.configure(appender1);
-			
-			// console appender 
-			ConsoleAppender appender2 = new ConsoleAppender(layout);
-			BasicConfigurator.configure(appender2);
-		}
-		catch(IOException e) {
-			System.out.println("MomarServer got an exception while initializing the logger.");
-			e.printStackTrace();
-		}
-		
-		Level logLevel = Level.INFO;
-		Logger.getRootLogger().setLevel(Level.OFF);
-		Logger.getLogger(PACKAGE_ROOT).setLevel(logLevel);
-		LOG.info("logging level: " + logLevel);
-		
-		LOG.info("Initializing logging done.");
-    }
-    
-	private void initConfig() {
-		System.out.println("Bart: initializing configuration.");
-		
-		// properties
-		Properties props = new Properties();
-		
-		// new loader to load from disk instead of war file
-		String configfilename = "/springfield/homer/config.xml";
-		if (isWindows()) {
-			configfilename = "c:\\springfield\\homer\\config.xml";
-		}
-		
-		// load from file
-		try {
-			System.out.println("INFO: Loading config file from load : "+configfilename);
-			File file = new File(configfilename);
-
-			if (file.exists()) {
-				props.loadFromXML(new BufferedInputStream(new FileInputStream(file)));
-			} else { 
-				System.out.println("FATAL: Could not load config "+configfilename);
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		// only get the marge communication port unless we are a smithers
-		port = Integer.parseInt(props.getProperty("marge-port"));
-	}
-
-	
-    /**
-     * Shutdown
-     */
-	public static void destroy() {
-		// destroy timer
-		if (marge!=null) marge.destroy();
-	}
-	
-	private class DiscoveryThread extends Thread {
-	    DiscoveryThread() {
-	      super("dthread");
-	      start();
-	    }
-
-	    public void run() {
-	     int counter = 0;
-	      while (LazyHomer.noreply || counter<10) {
-	    	if (counter>4 && LazyHomer.noreply) LOG.info("Still looking for smithers on multicast port "+port+" ("+LazyHomer.noreply+")");
-	    	LazyHomer.send("INFO","/domain/internal/service/getname");
-	        try {
-	          sleep(500+(counter*100));
-	          counter++;
-	        } catch (InterruptedException e) {
-	          throw new RuntimeException(e);
-	        }
-	      }
-	      LOG.info("Stopped looking for new smithers");
-	    }
-	}
-
-	public static int getPort() {
-		return port;
-	}
-
+	}*/
 }

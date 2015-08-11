@@ -5,12 +5,13 @@ import org.apache.log4j.Logger;
 import org.restlet.Context;
 import org.restlet.data.Form;
 import org.restlet.data.MediaType;
-import org.restlet.data.Request;
-import org.restlet.data.Response;
-import org.restlet.resource.Representation;
-import org.restlet.resource.Resource;
-import org.restlet.resource.StringRepresentation;
-import org.restlet.resource.Variant;
+import org.restlet.Request;
+import org.restlet.Response;
+import org.restlet.representation.Representation;
+import org.restlet.representation.StringRepresentation;
+import org.restlet.representation.Variant;
+import org.restlet.resource.Get;
+import org.restlet.resource.ServerResource;
 
 import com.noterik.springfield.momar.MomarServer;
 import com.noterik.springfield.momar.homer.LazyHomer;
@@ -37,17 +38,21 @@ import com.noterik.springfield.momar.homer.LazyHomer;
  * @version $Id: LoggingResource.java,v 1.2 2009-05-06 10:12:00 derk Exp $
  *
  */
-public class LoggingResource extends Resource {
+public class LoggingResource extends ServerResource {
 
+	public LoggingResource() {
+		//constructor
+	}
+	
 	/**
-	 * Default constructor
+	 * doInit
 	 * 
 	 * @param context
 	 * @param request
 	 * @param response
 	 */
-	public LoggingResource(Context context, Request request, Response response) {
-		super(context, request, response);
+	public void doInit(Context context, Request request, Response response) {
+		super.init(context, request, response);
 		
 		// add representational variants allowed
         getVariants().add(new Variant(MediaType.TEXT_XML));
@@ -62,8 +67,8 @@ public class LoggingResource extends Resource {
 	/**
 	 * GET
 	 */
-	@Override
-    public Representation getRepresentation(Variant variant) {
+	@Get
+    public void handleGet() {
 		String responseBody = "";
 		
 		// get parameters
@@ -109,6 +114,6 @@ public class LoggingResource extends Resource {
 		
 		// return
 		Representation entity = new StringRepresentation(responseBody);
-        return entity;
+        getResponse().setEntity(entity);
 	}
 }

@@ -1,7 +1,7 @@
 package com.noterik.springfield.momar.restlet;
 
 import org.restlet.Context;
-import org.restlet.Router;
+import org.restlet.routing.Router;
 
 public class MomarRestlet extends Router {	
 	public MomarRestlet(Context cx) {

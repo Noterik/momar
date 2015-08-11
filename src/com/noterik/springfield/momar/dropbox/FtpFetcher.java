@@ -21,9 +21,12 @@ import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.Node;
+import org.springfield.mojo.ftp.FtpHelper;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.springfield.momar.homer.*;
-import com.noterik.springfield.tools.ftp.FtpHelper;
+
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
@@ -54,7 +57,10 @@ public class FtpFetcher extends Thread {
 				ArrayList<String> checklist = new ArrayList<String>();
 				// first get the collection we check against
 				System.out.println("FtpFetcher URL="+collection);
-				String response = LazyHomer.sendRequest("GET",collection+"/presentation",null,null);
+				ServiceInterface smithers = ServiceManager.getService("smithers");
+				if (smithers==null) return;
+				String response = smithers.get(collection+"/presentation",null,null);
+
 				try {
 					// get all the md5 values to check against
 					Document doc = DocumentHelper.parseText(response);

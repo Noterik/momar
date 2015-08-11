@@ -3,6 +3,8 @@ package com.noterik.springfield.momar.TF;
 import java.io.File;
 
 import org.apache.log4j.Logger;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.bart.marge.model.Service;
 import com.noterik.bart.marge.server.MargeServer;
@@ -14,7 +16,6 @@ import com.noterik.springfield.momar.homer.MargeObserver;
 import com.noterik.springfield.momar.homer.MountProperties;
 import com.noterik.springfield.momar.queue.Job;
 import com.noterik.springfield.momar.queue.QueueManager;
-import com.noterik.springfield.tools.fs.URIParser;
 
 /**
  * Worker thread that picks up jobs.
@@ -129,11 +130,11 @@ public class TranscoderWorker implements MargeObserver {
 		LOG.debug("removing job: "+cJob);
 		
 		// send delete call
-		LazyHomer.sendRequest("DELETE", cJob.getUri(), null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.delete( cJob.getUri(), null, null);
 		LOG.debug("send delete call to "+cJob.getUri());
 	}
-	
-
 	
 	/**
 	 * set the properties in the rawvideo after transcoding
@@ -148,14 +149,16 @@ public class TranscoderWorker implements MargeObserver {
 		String rawUri = cJob.getProperty("referid");
 		
 		// set the transferred property
-		LazyHomer.sendRequest("PUT", rawUri + "/properties/transferred", "false", "text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.put(rawUri + "/properties/transferred", "false", "text/xml");
 		
 		if (success){				
 			// set the status property to done
-			LazyHomer.sendRequest("PUT", rawUri + "/properties/status", "done", "text/xml");
+			smithers.put(rawUri + "/properties/status", "done", "text/xml");
 		}else{		
 			// set the status property to fail
-			LazyHomer.sendRequest("PUT", rawUri + "/properties/status", "failed", "text/xml");
+			smithers.put(rawUri + "/properties/status", "failed", "text/xml");
 		}
 		//Check if an additional script is provided to run after the job finished
 		String mount = cJob.getProperty("mount");
@@ -179,11 +182,3 @@ public class TranscoderWorker implements MargeObserver {
 		}
 	}
 }
-
-
-
-
-
-
-
-

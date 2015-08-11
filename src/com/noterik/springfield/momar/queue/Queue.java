@@ -9,11 +9,13 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Node;
+import org.springfield.mojo.ftp.URIParser;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.bart.marge.model.Service;
 import com.noterik.bart.marge.server.MargeServer;
 import com.noterik.springfield.momar.homer.LazyHomer;
-import com.noterik.springfield.tools.fs.URIParser;
 
 /**
  * Queue object
@@ -115,7 +117,9 @@ public class Queue implements Comparable<Queue> {
 		LOG.debug("getting jobs for queue: "+uri);
 
 		// get jobs in queue
-		String queueXml = LazyHomer.sendRequest("GET", uri, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return null;
+		String queueXml = smithers.get(uri, null, null);
 		
 		LOG.debug("response: \n" + queueXml);
 		// parse document

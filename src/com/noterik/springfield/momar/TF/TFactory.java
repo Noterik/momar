@@ -10,6 +10,9 @@ import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
+import org.springfield.mojo.ftp.FtpHelper;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.bart.marge.model.Service;
 import com.noterik.bart.marge.server.MargeServer;
@@ -18,8 +21,6 @@ import com.noterik.springfield.momar.homer.LazyHomer;
 import com.noterik.springfield.momar.homer.MountProperties;
 import com.noterik.springfield.momar.queue.Job;
 import com.noterik.springfield.momar.tools.TFHelper;
-import com.noterik.springfield.tools.fs.URIParser;
-import com.noterik.springfield.tools.ftp.FtpHelper;
 
 /**
  * Transcoding part of service.
@@ -95,7 +96,9 @@ public class TFactory {
 		
 		// send PUT call
 		LOG.debug("uri: " + rawUri + "/properties/reencode" );
-		LazyHomer.sendRequest("PUT", rawUri + "/properties/reencode", "false", "text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.put(rawUri + "/properties/reencode", "false", "text/xml");
 	}
 	
 	
@@ -317,7 +320,9 @@ public class TFactory {
 	private Document getProperties(String uri){		
 		
 		// send request
-		String response = LazyHomer.sendRequest("GET", uri, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return null;
+		String response = smithers.get(uri, null, null);
 		
 		// parse
 		Document doc = null;		

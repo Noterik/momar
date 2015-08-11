@@ -12,12 +12,14 @@ import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.Node;
+import org.springfield.fs.FSXMLBuilder;
+import org.springfield.mojo.ftp.URIParser;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.bart.marge.model.Service;
 import com.noterik.bart.marge.server.MargeServer;
 import com.noterik.springfield.momar.homer.LazyHomer;
-import com.noterik.springfield.tools.fs.FSXMLBuilder;
-import com.noterik.springfield.tools.fs.URIParser;
 
 /**
  * Container for jobs
@@ -141,7 +143,9 @@ public class Job {
 		// get all the raw videos
 		LOG.debug("sending get request to: " + parentURI);
 		
-		String response = LazyHomer.sendRequest("GET", parentURI, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get(parentURI, null, null);
 
 		LOG.debug("response was: " + response);
 		
@@ -184,7 +188,7 @@ public class Job {
 				oNode = doc.selectSingleNode("//rawvideo/properties[contains(original,'/domain/')]");
 				if (oNode != null) {
 					//get original refered video for original path and filename
-					String resp = LazyHomer.sendRequest("GET", oNode.valueOf("original"), null, null);
+					String resp = smithers.get(oNode.valueOf("original"), null, null);
 					Document oDoc = DocumentHelper.parseText(resp);
 					String filename = oDoc.selectSingleNode("//rawvideo/properties/filename") == null ? "" : oDoc.selectSingleNode("//rawvideo/properties/filename").getText();
 					original = filename.substring(0, filename.lastIndexOf("/")+1);
@@ -246,7 +250,9 @@ public class Job {
 		// make xml
 		String statusXml = FSXMLBuilder.getFSXMLStatusMessage(message, details, "");
 		
-		LazyHomer.sendRequest("PUT",uri + "/status/1/properties",statusXml,"text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.put(uri + "/status/1/properties",statusXml,"text/xml");
 		
 		// debug
 		LOG.debug("Settings status for " + uri + "/status/1/properties");
@@ -270,7 +276,9 @@ public class Job {
 		String errorXml = FSXMLBuilder.getFSXMLErrorMessage("500",message,details, rawUri);
 			
 		// set error message
-		LazyHomer.sendRequest("PUT",uri + "/error/1/properties",errorXml,"text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.put(uri + "/error/1/properties",errorXml,"text/xml");
 		
 		// debug
 		LOG.debug("Settings status for " + uri + "/error/1/properties");
@@ -362,7 +370,9 @@ public class Job {
 	 * @return the value of the property, null if the property did not exists or an empty string if there was an error
 	 */
 	public String getStatusProperty(String property) {
-		String response = LazyHomer.sendRequest("GET",uri + "/status/1/properties/"+property,null,null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return "";
+		String response = smithers.get(uri + "/status/1/properties/"+property,null,null);
 
 		LOG.debug("Get status property "+property+" response "+response);
 		try { 
@@ -382,7 +392,9 @@ public class Job {
 	public ArrayList<String> getStatusProperties() {
 		ArrayList<String> results =new ArrayList<String>();
 		
-		String response = LazyHomer.sendRequest("GET",uri + "/status/1/properties",null,null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return null;
+		String response = smithers.get(uri + "/status/1/properties",null,null);
 
 		try { 
 			Document doc = DocumentHelper.parseText(response);	
@@ -405,7 +417,9 @@ public class Job {
 	
 	public void setStatusProperty(String property, String value) {
 		// set status message
-		LazyHomer.sendRequest("PUT", uri + "/status/1/properties/"+property, value, "text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.put(uri + "/status/1/properties/"+property, value, "text/xml");
 		
 		// debug
 		LOG.debug("Settings status for " + uri + "/status/1/properties/"+property);

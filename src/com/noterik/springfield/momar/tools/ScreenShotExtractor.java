@@ -11,12 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.springfield.mojo.ftp.FtpHelper;
 
 import com.noterik.springfield.momar.homer.LazyHomer;
 import com.noterik.springfield.momar.homer.MomarProperties;
 import com.noterik.springfield.momar.homer.MountProperties;
-import com.noterik.springfield.tools.FileHelper;
-import com.noterik.springfield.tools.ftp.FtpHelper;
 
 
 /**

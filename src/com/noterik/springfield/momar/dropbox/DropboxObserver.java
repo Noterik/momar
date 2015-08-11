@@ -14,11 +14,13 @@ import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.Node;
+import org.springfield.mojo.ftp.FtpHelper;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.springfield.momar.homer.*;
 import com.noterik.springfield.momar.tools.*;
 import com.noterik.springfield.momar.util.Chmod;
-import com.noterik.springfield.tools.ftp.FtpHelper;
 
 public class DropboxObserver implements MargeObserver {
 	/** The DropboxObserver log4j Logger */
@@ -145,7 +147,9 @@ public class DropboxObserver implements MargeObserver {
 	private void performFileMethod() {
 		ArrayList<String> checklist = new ArrayList<String>();
 		// first get the collection we check against
-		String response = LazyHomer.sendRequest("GET",collection+"/presentation",null,null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get(collection+"/presentation",null,null);
 		try {
 			// get all the md5 values to check against
 			Document doc = DocumentHelper.parseText(response);
@@ -203,7 +207,9 @@ public class DropboxObserver implements MargeObserver {
 			body += "</rawvideo>";
 			body += "</fsxml>";
 			
-			String result = LazyHomer.sendRequest("PUT","/domain/"+fdomain+"/user/"+fuser+"/video/"+fvideo+"/properties",body,"text/xml");
+			ServiceInterface smithers = ServiceManager.getService("smithers");
+			if (smithers==null) return false;
+			String result = smithers.put("/domain/"+fdomain+"/user/"+fuser+"/video/"+fvideo+"/properties",body,"text/xml");
 			int pos = result.indexOf("/video/");
 			if (pos==-1) return false; // something went wrong
 		} else {		
@@ -221,7 +227,9 @@ public class DropboxObserver implements MargeObserver {
 				newbody+="</properties>";
 				newbody+="</rawvideo></fsxml>";
 	
-				String result = LazyHomer.sendRequest("POST","/domain/"+fdomain+"/user/"+fuser+"/video",newbody,"text/xml");
+				ServiceInterface smithers = ServiceManager.getService("smithers");
+				if (smithers==null) return false;
+				String result = smithers.post("/domain/"+fdomain+"/user/"+fuser+"/video",newbody,"text/xml");
 				int pos = result.indexOf("/video/");
 				if (pos==-1) return false; // something went wrong
 	
@@ -251,7 +259,9 @@ public class DropboxObserver implements MargeObserver {
        	newbody+="<properties></properties>";
        	newbody+=videoplaylistpart;
        	newbody+="</videoplaylist></fsxml>";
-    	String result = LazyHomer.sendRequest("POST","/domain/"+fdomain+"/user/"+fuser+"/presentation",newbody,"text/xml");
+       	ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return false;
+		String result = smithers.post("/domain/"+fdomain+"/user/"+fuser+"/presentation",newbody,"text/xml");
 		int pos = result.indexOf("/presentation/");
 		if (pos==-1) return false; // something went wrong
 		String code = result.substring(pos+14);
@@ -265,8 +275,8 @@ public class DropboxObserver implements MargeObserver {
 		newbody+="</attributes>";
     	newbody+="<properties>";
     	newbody+="</properties></fsxml>";
-    	result = LazyHomer.sendRequest("POST","/domain/"+fdomain+"/user/"+fuser+"/collection/"+fcollection+"/presentation",newbody,"text/xml");
-    	String collectionPresentation = result.substring(result.indexOf("<uri>")+5, result.indexOf("</uri>"));
+		result = smithers.post("/domain/"+fdomain+"/user/"+fuser+"/collection/"+fcollection+"/presentation",newbody,"text/xml");
+       	String collectionPresentation = result.substring(result.indexOf("<uri>")+5, result.indexOf("</uri>"));
     	
     	// create dns entry
     	createDNSEntry(collectionPresentation, fileIdentifier, fdomain);
@@ -287,7 +297,9 @@ public class DropboxObserver implements MargeObserver {
 			String selector = "!da";
 			LOG.debug("SEND TO /dns/"+selector+"/"+identifier);
 			LOG.debug(newbody);
-			LazyHomer.sendRequest("PUT", "/dns/"+selector+"/"+identifier, newbody, "text/xml");
+			ServiceInterface smithers = ServiceManager.getService("smithers");
+			if (smithers==null) return;
+			String response = smithers.put("/dns/"+selector+"/"+identifier, newbody, "text/xml");
 		}
 	}
 	
@@ -310,7 +322,9 @@ public class DropboxObserver implements MargeObserver {
        	newbody+="</properties>";
     	newbody+="</rawvideo></fsxml>";
     	String videourl = userurl+"/video";
-		String result = LazyHomer.sendRequest("POST",videourl,newbody,"text/xml");
+    	ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return false;
+		String result = smithers.post(videourl,newbody,"text/xml");
 		//System.out.println("BLA="+result);
 		pos = result.indexOf("/video/");
 		if (pos==-1) return false; // something went wrong
@@ -337,7 +351,7 @@ public class DropboxObserver implements MargeObserver {
        	newbody+="<video id=\"1\" referid=\""+userurl+"/video/"+code+"\"><properties></properties></video>";
 
        	newbody+="</videoplaylist></fsxml>";
-    	result = LazyHomer.sendRequest("POST",userurl+"/presentation",newbody,"text/xml");
+       	result = smithers.post(userurl+"/presentation",newbody,"text/xml");
 		pos = result.indexOf("/presentation/");
 		if (pos==-1) return false; // something went wrong
 		code = result.substring(pos+14);
@@ -351,7 +365,7 @@ public class DropboxObserver implements MargeObserver {
 		newbody+="</attributes>";
     	newbody+="<properties>";
     	newbody+="</properties></fsxml>";
-		LazyHomer.sendRequest("POST",collection+"/presentation",newbody,"text/xml");
+		smithers.post(collection+"/presentation",newbody,"text/xml");
 		// now its all done lets also copy the other raws in and start the action
 		addProfileRawvideos(videourl);
 
@@ -399,7 +413,9 @@ public class DropboxObserver implements MargeObserver {
 		body += "<audiobitrate>86048</audiobitrate>";
 		body += "<batchfile>html5_h264</batchfile>";
     	body+="</properties></rawvideo></fsxml>";
-		LazyHomer.sendRequest("PUT",baseurl+"properties",body,"text/xml");
+    	ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.put(baseurl+"properties",body,"text/xml");
 	}
 		
 	private String addOriginalRawvideoProperties() {
@@ -500,7 +516,9 @@ public class DropboxObserver implements MargeObserver {
 		String body = "<fsxml><properties><size>320x240</size><interval>"+interval+"</interval><redo>false</redo>";
 		body += "<uri>"+videoUri+"</uri><rawvideo>"+path+"/rawvideo/1</rawvideo></properties></fsxml>";
 		
-		LazyHomer.sendRequest("PUT",path+"/screens/1/properties",body,"text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.put(path+"/screens/1/properties",body,"text/xml");
 	}
 	
 	public void destroy() {

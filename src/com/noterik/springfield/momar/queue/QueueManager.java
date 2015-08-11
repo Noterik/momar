@@ -11,6 +11,9 @@ import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.Node;
+import org.springfield.mojo.ftp.URIParser;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.bart.marge.model.Service;
 import com.noterik.bart.marge.server.MargeServer;
@@ -20,7 +23,6 @@ import com.noterik.springfield.momar.homer.LazyHomer;
 import com.noterik.springfield.momar.homer.LazyMarge;
 import com.noterik.springfield.momar.homer.MargeObserver;
 import com.noterik.springfield.momar.tools.TFHelper;
-import com.noterik.springfield.tools.fs.URIParser;
 
 /**
  * Keeps the list of queues
@@ -84,7 +86,9 @@ public class QueueManager implements MargeObserver {
 		
 		String uri = QUEUE_URI.replace("{domain}", domain);
 		String xml = "<fsxml><properties><depth>1</depth></properties></fsxml>";
-		String response = LazyHomer.sendRequest("GET", uri, xml, "text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return false;
+		String response = smithers.get(uri,xml,"text/xml");
 		
 		LOG.debug("parsing response from smithers");
 		try {
@@ -126,7 +130,7 @@ public class QueueManager implements MargeObserver {
 			//String dropboxurl = "/domain/"+domain+"/service/momar/dropbox";
 			String dropboxurl = "/domain/internal/service/momar/dropbox";
 
-			response = LazyHomer.sendRequest("GET",dropboxurl,null,null);
+			response = smithers.get(dropboxurl,null,null);
 			doc = DocumentHelper.parseText(response);
 			for(Iterator<Element> iter = doc.getRootElement().elementIterator("dropbox"); iter.hasNext(); ) {
 				elem = iter.next();
@@ -242,7 +246,10 @@ public class QueueManager implements MargeObserver {
 		
 		// request queues from filessystem
 		String xml = "<fsxml><properties><depth>1</depth></properties></fsxml>";
-		String response = LazyHomer.sendRequest("GET", uri, xml, "text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return false;
+		String response = smithers.get(uri,xml,"text/xml");
+
 		try {
 			// parse response
 			Document doc = DocumentHelper.parseText(response);
@@ -272,7 +279,9 @@ public class QueueManager implements MargeObserver {
 	}
 	
 	private void handleRawvideoChange(String url) {
-		String response =	LazyHomer.sendRequest("GET", url, null, null);
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get(url,null,null);
 		try {
 			// parse response
 			Document doc = DocumentHelper.parseText(response);
@@ -290,19 +299,21 @@ public class QueueManager implements MargeObserver {
 	
 	private void addRawvideoJob(String url,Document doc) {
 		LOG.debug("Add Raw Job Url="+url);
-		LazyHomer.sendRequest("PUT", url+"/properties/reencode", "false", "text/xml");
-		
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.put(url+"/properties/reencode","false","text/xml");
+				
 		String domain = TFHelper.getDomainFromUrl(url);
 
 		String newbody = "<fsxml><properties/>";
     	newbody+="<rawvideo id=\"1\" referid=\""+url+"\"><properties>";
         newbody+="</properties></rawvideo></fsxml>";	
-		String response = LazyHomer.sendRequest("POST","/domain/"+domain+"/service/momar/queue/default/job",newbody,"text/xml");
-		//get job id from response
+        String response = smithers.post("/domain/"+domain+"/service/momar/queue/default/job",newbody,"text/xml");
+   		//get job id from response
 		try {
 			Document responseDoc = DocumentHelper.parseText(response);
 			String jobid = responseDoc.selectSingleNode("//properties/uri") == null ? "" : responseDoc.selectSingleNode("//properties/uri").getText();
-			LazyHomer.sendRequest("PUT", url+"/properties/job", jobid, "text/xml");
+			smithers.put(url+"/properties/job", jobid, "text/xml");
 		} catch (DocumentException e) {
 			LOG.error("Could not create job for "+url);
 		}

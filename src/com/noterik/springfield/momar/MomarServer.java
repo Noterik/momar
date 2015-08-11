@@ -16,6 +16,8 @@ import org.apache.log4j.Logger;
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.springfield.mojo.interfaces.ServiceInterface;
+import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.springfield.momar.TF.TranscoderWorker;
 import com.noterik.springfield.momar.homer.LazyHomer;
@@ -52,6 +54,9 @@ public class MomarServer {
 	/** instance */
 	private static MomarServer instance = new MomarServer();
 	
+	/** Root path: the path the webservice is running in */
+	private String rootPath;
+	private String scriptsPath;
 	
 	/** The queue manager */
 	private QueueManager qm;
@@ -116,6 +121,15 @@ public class MomarServer {
 	 */
 	public Properties getConfiguration() {
 		return configuration;
+	}
+	
+	/**
+	 * Set root path
+	 */
+	public void setRootPath(String rootPath) {
+		this.rootPath = rootPath;
+		this.scriptsPath = rootPath + "/scripts/";
+		//init();
 	}
 
 	
@@ -207,7 +221,9 @@ public class MomarServer {
 		
 		String uri = DOMAIN_URI;
 		String xml = "<fsxml><properties><depth>1</depth></properties></fsxml>";
-		String response = LazyHomer.sendRequest("GET", uri, xml, "text/xml");
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.get(uri,xml,"text/xml");
 		
 		try {
 			// parse response

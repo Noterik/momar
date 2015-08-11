@@ -2,14 +2,18 @@ package com.noterik.springfield.momar.restlet;
 
 import org.restlet.Context;
 import org.restlet.data.MediaType;
-import org.restlet.data.Request;
-import org.restlet.data.Response;
-import org.restlet.resource.Representation;
-import org.restlet.resource.Resource;
-import org.restlet.resource.StringRepresentation;
-import org.restlet.resource.Variant;
+import org.restlet.Request;
+import org.restlet.Response;
+import org.restlet.representation.Representation;
+import org.restlet.representation.StringRepresentation;
+import org.restlet.representation.Variant;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Get;
+import org.restlet.resource.Post;
+import org.restlet.resource.Put;
+import org.restlet.resource.ServerResource;
 
-public class MomarResource extends Resource {
+public class MomarResource extends ServerResource {
 	/**
 	 * Request uri
 	 */
@@ -22,8 +26,13 @@ public class MomarResource extends Resource {
 	 * @param request
 	 * @param response
 	 */
-	public MomarResource(Context context, Request request, Response response) {
-        super(context, request, response);
+	public MomarResource() {
+		//constructor
+	}
+	
+	
+	public void doInit(Context context, Request request, Response response) {
+        super.init(context, request, response);
         
         // add representational variants allowed
         getVariants().add(new Variant(MediaType.TEXT_XML));
@@ -41,17 +50,18 @@ public class MomarResource extends Resource {
 	/**
 	 * GET
 	 */
-	@Override
-    public Representation getRepresentation(Variant variant) {
+	@Get
+    public void handleGet() {
 		String responseBody = "GET: " + uri;
 		Representation entity = new StringRepresentation(responseBody);
-        return entity;
+		getResponse().setEntity(entity);
 	}
 	
 	/**
 	 * PUT
 	 */
-	public void put(Representation representation) {
+	@Put
+	public void handlePut(Representation representation) {
 		String responseBody = "PUT: " + uri;
 		Representation entity = new StringRepresentation(responseBody);
 		getResponse().setEntity(entity);
@@ -60,7 +70,8 @@ public class MomarResource extends Resource {
 	/**
 	 * POST
 	 */
-	public void post(Representation representation) {
+	@Post
+	public void handlePost(Representation representation) {
 		String responseBody = "POST: " + uri;
 		Representation entity = new StringRepresentation(responseBody);
 		getResponse().setEntity(entity);
@@ -69,7 +80,8 @@ public class MomarResource extends Resource {
 	/**
 	 * DELETE
 	 */
-	public void delete() {
+	@Delete
+	public void handleDelete() {
 		String responseBody = "DELETE: " + uri;
 		Representation entity = new StringRepresentation(responseBody);
 		getResponse().setEntity(entity);
