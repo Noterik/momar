@@ -137,18 +137,22 @@ public class MomarServer {
 	 * Initializes the configuration
 	 */
 	public void init() {
-        
-		// init properties xml
-		initConfigurationXML();
+		Thread t = new Thread() {
+			public void run() {
+				// init properties xml
+				initConfigurationXML();
 		
-		// read configuration for decision engine
-		initDecisionEngine();
+				// read configuration for decision engine
+				initDecisionEngine();
 		
-		// init queue manager
-		initQueueManager();
+				// init queue manager
+				initQueueManager();
 		
-		// start 
-		initWorkers();
+				// start 
+				initWorkers();
+			}
+		};
+		t.start();
 		
 		running = true;
 	}

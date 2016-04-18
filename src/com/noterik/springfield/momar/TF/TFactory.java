@@ -175,8 +175,10 @@ public class TFactory {
 				String batchfile = job.getProperty("batchfile")+batchFilesExtension;
 				LOG.debug("transcode using batch file "+batchfile);
 			
-				String[] cmdArray = new String[] {batchFilesPath+File.separator+batchfile, ffmpegPath+File.separator, inputFile, job.getProperty("wantedwidth"), job.getProperty("wantedheight"), job.getProperty("wantedbitrate"), job.getProperty("wantedframerate"), job.getProperty("wantedaudiobitrate"), outputDir, job.getProperty("extension"),tempPath,job.getId()};
-				LOG.debug("command: "+batchFilesPath+File.separator+batchfile+" "+ffmpegPath+File.separator+" "+inputFile+" "+job.getProperty("wantedwidth")+" "+job.getProperty("wantedheight")+" "+job.getProperty("wantedbitrate")+" "+job.getProperty("wantedframerate")+" "+job.getProperty("wantedaudiobitrate")+" "+outputDir+" "+job.getProperty("extension")+" "+tempPath+" "+job.getId());
+				String originalBitrate = job.getOriginalProperty("videobitrate") != null ? job.getOriginalProperty("videobitrate") : "0";
+				
+				String[] cmdArray = new String[] {batchFilesPath+File.separator+batchfile, ffmpegPath+File.separator, inputFile, job.getProperty("wantedwidth"), job.getProperty("wantedheight"), job.getProperty("wantedbitrate"), job.getProperty("wantedframerate"), job.getProperty("wantedaudiobitrate"), outputDir, job.getProperty("extension"), tempPath, job.getId(), job.getOriginalProperty("width"), job.getOriginalProperty("height"), originalBitrate};
+				LOG.debug("command: "+batchFilesPath+File.separator+batchfile+" "+ffmpegPath+File.separator+" "+inputFile+" "+job.getProperty("wantedwidth")+" "+job.getProperty("wantedheight")+" "+job.getProperty("wantedbitrate")+" "+job.getProperty("wantedframerate")+" "+job.getProperty("wantedaudiobitrate")+" "+outputDir+" "+job.getProperty("extension")+" "+tempPath+" "+job.getId()+" "+job.getOriginalProperty("width")+" "+job.getOriginalProperty("height")+" "+originalBitrate);
 				
 				File bFile = new File(batchFilesPath+File.separator+batchfile);
 				if (!bFile.exists()) {

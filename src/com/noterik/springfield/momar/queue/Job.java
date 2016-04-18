@@ -1,5 +1,6 @@
 package com.noterik.springfield.momar.queue;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -68,6 +69,11 @@ public class Job {
 	private Map<String,String> properties;
 	
 	/**
+	 * original video properties
+	 */
+	private Map<String,String> originalProperties;
+	
+	/**
 	 * jobsid
 	 */
 	private String id;
@@ -125,6 +131,8 @@ public class Job {
 			properties.put("referid", referid);
 		}
 		
+		originalProperties = new HashMap<String,String>();
+		
 		// parse parent XML
 		parseParentXML();
 	}
@@ -156,6 +164,13 @@ public class Job {
 			// determine original
 			Node oNode = doc.selectSingleNode("//rawvideo/properties[original='true']");
 			if(oNode!=null) {
+				List<Node> children = oNode.selectNodes("child::*");
+				Node child;
+				for(Iterator<Node> iter = children.iterator(); iter.hasNext(); ) {
+					child = iter.next();				
+					originalProperties.put(child.getName(), child.getText());
+				}
+				
 				String extension = oNode.valueOf("extension");
 				String filename = oNode.valueOf("filename");
 
@@ -170,8 +185,13 @@ public class Job {
 
 				if (filename != null && !filename.equals("")) {
 					//check if filename was set, use that
-					original = filename.substring(0, filename.lastIndexOf("/")+1);
-					originalFilename = filename.substring(filename.lastIndexOf("/")+1);
+					if (filename.indexOf("/") > -1) {							
+						original = filename.substring(0, filename.lastIndexOf("/")+1);
+						originalFilename = filename.substring(filename.lastIndexOf("/")+1);
+					} else {
+						original = parentURI + File.separator + "rawvideo" + File.separator + oNode.getParent().valueOf("@id") + File.separator;
+						originalFilename = filename;
+					}							
 				} else {
 					// construct original path and filename
 					original = parentURI + "/rawvideo/" + oNode.getParent().valueOf("@id");
@@ -180,9 +200,14 @@ public class Job {
 				 
 				//set output uri if this was set in the requested raw video
 				if (properties.containsKey("filename") && !properties.get("filename").equals("")) {
-					String requestedFilename = properties.get("filename");				
-					outputURI = requestedFilename.substring(0, requestedFilename.lastIndexOf("/")+1);
-					outputFilename = requestedFilename.substring(requestedFilename.lastIndexOf("/")+1);
+					String requestedFilename = properties.get("filename");	
+					if (requestedFilename.indexOf("/") > -1) {
+						outputURI = requestedFilename.substring(0, requestedFilename.lastIndexOf("/")+1);
+						outputFilename = requestedFilename.substring(requestedFilename.lastIndexOf("/")+1);
+					} else {
+						outputURI = referid+File.separator;
+						outputFilename = requestedFilename;
+ 					}
 				} 				
 			} else {
 				oNode = doc.selectSingleNode("//rawvideo/properties[contains(original,'/domain/')]");
@@ -239,6 +264,16 @@ public class Job {
 	 */
 	public String getProperty(String property) {
 		return properties.get(property);
+	}
+	
+	/**
+	 * Get a single property from the original video properties
+	 * 
+	 * @param property
+	 * @return property, null if property does not exist
+	 */
+	public String getOriginalProperty(String property) {
+		return originalProperties.get(property);
 	}
 	
 	/**
