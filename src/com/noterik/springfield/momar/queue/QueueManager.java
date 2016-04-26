@@ -272,7 +272,9 @@ public class QueueManager implements MargeObserver {
 				String key = url.substring(pos);
 				if (key.indexOf("/user/*/video/*/rawvideo/*")!=-1) {
 					// its a rawvideo change
-					handleRawvideoChange(url.substring(0,pos));
+					if (LazyHomer.getMyMomarProperties().getHandleTriggers()) {
+						handleRawvideoChange(url.substring(0,pos));
+					}
 				}
 			}
 		}

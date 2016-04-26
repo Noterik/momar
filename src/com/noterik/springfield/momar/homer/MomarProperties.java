@@ -12,6 +12,7 @@ public class MomarProperties {
 	private String temporarydirectory;
 	private String batchFilesPath;
 	private String batchFilesExtension;
+	private boolean handleTriggers;
 	
 	public void setIpNumber(String i) {
 		ipnumber = i;
@@ -57,6 +58,10 @@ public class MomarProperties {
 		status = s;
 	}
 	
+	public void setHandleTriggers(boolean t) {
+		handleTriggers = t;
+	}
+	
 	public String getName() {
 		return name;
 	}
@@ -100,5 +105,9 @@ public class MomarProperties {
 	
 	public String getBatchFilesExtension() {
 		return batchFilesExtension;
+	}
+	
+	public boolean getHandleTriggers() {
+		return handleTriggers;
 	}
 }

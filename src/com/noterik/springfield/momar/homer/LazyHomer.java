@@ -186,6 +186,8 @@ public class LazyHomer implements MargeObserver {
 					mp.setTemporaryDirectory(child.selectSingleNode("properties/temporarydirectory").getText());
 					mp.setBatchFilesPath(child.selectSingleNode("properties/batchfilespath").getText());
 					mp.setBatchFilesExtension(child.selectSingleNode("properties/batchfilesextension").getText());
+					boolean handleTriggers = child.selectSingleNode("properties/handletriggers") == null ? true : Boolean.parseBoolean(child.selectSingleNode("properties/handletriggers").getText());
+					mp.setHandleTriggers(handleTriggers);
 
 					if (ipnumber.equals(myip)) {
 						foundmynode = true;
