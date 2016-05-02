@@ -368,8 +368,8 @@ public class LazyHomer implements MargeObserver {
 						LOG.info("This momar will be started");
 						serv.setRootPath(rootPath);
 						serv.init();
+						setLogLevel(mp.getDefaultLogLevel());
 					}
-					setLogLevel(mp.getDefaultLogLevel());
 				} else {
 					if (serv.isRunning()) {
 						LOG.info("This momar will be turned off");
