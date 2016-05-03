@@ -439,19 +439,22 @@ public class TFactory {
 		try {
 			if(di != -1){
 				//String ds = line.substring(di + "Duration: ".length(), line.indexOf("."));
-				String ds = line.substring(di + "Duration: ".length(), line.indexOf(".",di));
+				String ds = line.substring(di + "Duration: ".length(), line.indexOf(",",di));
 				LOG.debug("DURATION: " + ds);
 				String hs = ds.substring(0, ds.indexOf(":"));
 				ds = ds.substring(ds.indexOf(":") + 1, ds.length());
 				String ms = ds.substring(0, ds.indexOf(":"));
 				ds = ds.substring(ds.indexOf(":") + 1, ds.length());
-				String ss = ds.substring(0, ds.length());
-				LOG.debug("H: " + hs + " M: " + ms + " S: " + ss);
+				String ss = ds.substring(0, ds.indexOf("."));
+				ds = ds.substring(ds.indexOf(".") +1, ds.length());
+				String dms = ds.substring(0, ds.length());
+				LOG.debug("H: " + hs + " M: " + ms + " S: " + ss +" MS: "+ dms);
 				short h = new Short(hs).shortValue();
 				short m = new Short(ms).shortValue();
 				short s = new Short(ss).shortValue();
-				curDuration = (h * 3600) + (m * 60) + s;
-				curDuration *= 1000;
+				short mms = new Short(dms).shortValue();
+				curDuration = (h * 3600) + (m * 60) + (s *1000) + mms;
+				curDuration *= 10;
 				LOG.debug("CURRENT DURATION: " + curDuration);
 			} else if(fi != -1){
 				String ts = line.substring(fi + " time=".length());
