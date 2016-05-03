@@ -14,8 +14,6 @@ import org.springfield.mojo.ftp.FtpHelper;
 import org.springfield.mojo.interfaces.ServiceInterface;
 import org.springfield.mojo.interfaces.ServiceManager;
 
-import com.noterik.bart.marge.model.Service;
-import com.noterik.bart.marge.server.MargeServer;
 import com.noterik.springfield.momar.MomarServer;
 import com.noterik.springfield.momar.homer.LazyHomer;
 import com.noterik.springfield.momar.homer.MountProperties;
@@ -363,8 +361,8 @@ public class TFactory {
 							bis = new BufferedInputStream(is);
 							int c;
 							StringBuffer line = new StringBuffer();
-							while ((c = bis.read()) != -1) {					
-								if(c != '\r'){
+							while ((c = bis.read()) != -1) {
+								if(c != '\r' && c != '\n'){
 									line.append((char) c);
 								} else {
 									parseOutput(line.toString());
@@ -396,8 +394,8 @@ public class TFactory {
 							bis = new BufferedInputStream(is);
 							int c;
 							StringBuffer line = new StringBuffer();
-							while ((c = bis.read()) != -1) {					
-								if(c != '\r'){
+							while ((c = bis.read()) != -1) {
+								if(c != '\r' && c != '\n'){
 									line.append((char) c);
 								} else {
 									parseOutput(line.toString());
@@ -415,7 +413,7 @@ public class TFactory {
 						}
 					}
 			    }
-			}.start();
+			}.start();	
 			
 			child.waitFor();
 		} catch (IOException e) {
