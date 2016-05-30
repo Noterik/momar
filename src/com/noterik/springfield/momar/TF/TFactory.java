@@ -453,8 +453,7 @@ public class TFactory {
 				short m = new Short(ms).shortValue();
 				short s = new Short(ss).shortValue();
 				short mms = new Short(dms).shortValue();
-				curDuration = (h * 3600) + (m * 60) + (s *1000) + mms;
-				curDuration *= 10;
+				curDuration = (h * 60 * 60 * 1000) + (m * 60 * 1000) + (s *1000) + (mms * 10);
 				LOG.debug("CURRENT DURATION: " + curDuration);
 			} else if(fi != -1){
 				String ts = line.substring(fi + " time=".length());
