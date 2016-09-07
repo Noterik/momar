@@ -138,7 +138,13 @@ public class Queue implements Comparable<Queue> {
 				
 				// add to job list
 				//System.out.println("JOB="+node.asXML());
-				jobs.add(new Job(jobUri,node.asXML()));
+				Job job = new Job(jobUri,node.asXML());
+				if (job.isValidJob()) {
+					jobs.add(job);
+				} else {
+					//remove invalid job
+					removeJob(job);
+				}
 			}
 			
 		} catch (DocumentException e) {
@@ -151,5 +157,20 @@ public class Queue implements Comparable<Queue> {
 	@Override
 	public String toString() {
 		return "("+uri+","+priority+")";
+	}
+	
+	/**
+	 * Removes job from queue 
+	 * 
+	 * @param job
+	 */
+	public void removeJob(Job job) {
+		LOG.debug("removing job: "+job);
+		
+		// send delete call
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.delete( job.getUri(), null, null);
+		LOG.debug("send delete call to "+job.getUri());
 	}
 }

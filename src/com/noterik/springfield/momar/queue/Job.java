@@ -88,6 +88,11 @@ public class Job {
 	 */
 	private String outputFilename;
 	
+	/**
+	 * Valid job
+	 */
+	private boolean validJob = false;
+	
 	
 	/**
 	 * Default constructor
@@ -122,15 +127,27 @@ public class Job {
 			for(Iterator<Node> iter = children.iterator(); iter.hasNext(); ) {
 				child = iter.next();
 				properties.put(child.getName(), child.getText());
+				if (child.getName().equals("error") && child.getText().equals("Dead link!")) {
+					//non valid job - refer invalid
+					return;
+				}
 			}
+		} else {
+			//non valid job
+			return;
 		}
 		
 		// add referid
 		String referid = doc.valueOf("//rawvideo/@referid");
 		if(referid!=null) {
 			properties.put("referid", referid);
+		} else {
+			//non valid job
+			return;
 		}
 		
+		//both rawvideo and refer found
+		validJob = true;
 		originalProperties = new HashMap<String,String>();
 		
 		// parse parent XML
@@ -174,9 +191,9 @@ public class Job {
 				String extension = oNode.valueOf("extension");
 				String filename = oNode.valueOf("filename");
 
-				if (extension.toLowerCase().equals("raw") || extension.toLowerCase().equals("cine")) {
+				if (extension.toLowerCase().equals("cine")) {
 					//we can't convert raw formats, get another raw video if possible and use that one
-					List<Node> raws = doc.selectNodes("//rawvideo/properties[extension!='raw' and extension!='cine']");
+					List<Node> raws = doc.selectNodes("//rawvideo/properties[extension!='cine']");
 					for (Iterator<Node> it = raws.iterator(); it.hasNext(); ) {
 						Node raw = it.next();
 						useraw = raw.getParent().valueOf("@id");
@@ -248,6 +265,7 @@ public class Job {
 				}
 			}
 		} catch(Exception e) {
+			validJob = false;
 			LOG.error("",e);
 		}
 		
@@ -460,6 +478,8 @@ public class Job {
 		LOG.debug("Settings status for " + uri + "/status/1/properties/"+property);
 		LOG.debug(value);
 	}
-
-
+	
+	public boolean isValidJob() {
+		return validJob;
+	}
 }
