@@ -97,9 +97,7 @@ public class TFactory {
 		ServiceInterface smithers = ServiceManager.getService("smithers");
 		if (smithers==null) return;
 		smithers.put(rawUri + "/properties/reencode", "false", "text/xml");
-	}
-	
-	
+	}	
 	
 	/*
 	 * Transcoding of a job using the parameters sent in the Job instance
@@ -175,9 +173,10 @@ public class TFactory {
 			
 				String originalBitrate = job.getOriginalProperty("videobitrate") != null ? job.getOriginalProperty("videobitrate") : "0";
 				String originalDuration = job.getOriginalProperty("duration") != null ? job.getOriginalProperty("duration") : "1";
+				String originalExtension = job.getOriginalProperty("extension") != null ? job.getOriginalProperty("extension") : "unknown";
 				
-				String[] cmdArray = new String[] {batchFilesPath+File.separator+batchfile, ffmpegPath+File.separator, inputFile, job.getProperty("wantedwidth"), job.getProperty("wantedheight"), job.getProperty("wantedbitrate"), job.getProperty("wantedframerate"), job.getProperty("wantedaudiobitrate"), outputDir, job.getProperty("extension"), tempPath, job.getId(), job.getOriginalProperty("width"), job.getOriginalProperty("height"), originalBitrate, originalDuration};
-				LOG.debug("command: "+batchFilesPath+File.separator+batchfile+" "+ffmpegPath+File.separator+" "+inputFile+" "+job.getProperty("wantedwidth")+" "+job.getProperty("wantedheight")+" "+job.getProperty("wantedbitrate")+" "+job.getProperty("wantedframerate")+" "+job.getProperty("wantedaudiobitrate")+" "+outputDir+" "+job.getProperty("extension")+" "+tempPath+" "+job.getId()+" "+job.getOriginalProperty("width")+" "+job.getOriginalProperty("height")+" "+originalBitrate+" "+originalDuration);
+				String[] cmdArray = new String[] {batchFilesPath+File.separator+batchfile, ffmpegPath+File.separator, inputFile, job.getProperty("wantedwidth"), job.getProperty("wantedheight"), job.getProperty("wantedbitrate"), job.getProperty("wantedframerate"), job.getProperty("wantedaudiobitrate"), outputDir, job.getProperty("extension"), tempPath, job.getId(), job.getOriginalProperty("width"), job.getOriginalProperty("height"), originalBitrate, originalDuration, originalExtension};
+				LOG.debug("command: "+batchFilesPath+File.separator+batchfile+" "+ffmpegPath+File.separator+" "+inputFile+" "+job.getProperty("wantedwidth")+" "+job.getProperty("wantedheight")+" "+job.getProperty("wantedbitrate")+" "+job.getProperty("wantedframerate")+" "+job.getProperty("wantedaudiobitrate")+" "+outputDir+" "+job.getProperty("extension")+" "+tempPath+" "+job.getId()+" "+job.getOriginalProperty("width")+" "+job.getOriginalProperty("height")+" "+originalBitrate+" "+originalDuration+" "+originalExtension);
 				
 				File bFile = new File(batchFilesPath+File.separator+batchfile);
 				if (!bFile.exists()) {
@@ -437,6 +436,7 @@ public class TFactory {
 		int fi = line.indexOf(" time=");
 		int tfc = line.indexOf("Total ffmpeg calls:");
 		int cfc = line.indexOf("Current ffmpeg call:");
+		int prg = line.indexOf("Progress: ");
 		try {
 			if(di != -1){
 				//String ds = line.substring(di + "Duration: ".length(), line.indexOf("."));
@@ -496,6 +496,9 @@ public class TFactory {
 				if (cfcs != null) {
 					currentFfmpegCall = Integer.parseInt(cfcs);
 				}
+			} else if (prg != -1) {
+			    String progress = line.substring(prg);
+			    _job.setStatus("Progress", progress);
 			}
 		} catch(Exception e) {
 			LOG.error("Could not parse ffmpeg output",e);
