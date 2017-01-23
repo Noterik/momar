@@ -498,7 +498,20 @@ public class TFactory {
 				}
 			} else if (prg != -1) {
 			    String progress = line.substring(prg);
-			    _job.setStatus("Progress", progress);
+			    progress = progress.substring(progress.indexOf(":")+1).trim();
+			    double progr = Double.parseDouble(progress);
+			    
+			    if (totalFfmpegCalls > 1) {
+				progr = progr / (double) totalFfmpegCalls;
+				progr += ((double)(currentFfmpegCall-1)/(double)totalFfmpegCalls)*100;
+			    }			    
+			    
+			    long currentTime = System.currentTimeMillis();
+			    // only log every so many seconds
+			    if( (currentTime - statusLastUpdatedTime) > STATUS_UPDATE_TIME) {
+				_job.setStatus("Progress", progr + "");
+				statusLastUpdatedTime = System.currentTimeMillis(); // setStatus could have taken some time
+			    }
 			}
 		} catch(Exception e) {
 			LOG.error("Could not parse ffmpeg output",e);
