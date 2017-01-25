@@ -504,12 +504,13 @@ public class TFactory {
 			    if (totalFfmpegCalls > 1) {
 				progr = progr / (double) totalFfmpegCalls;
 				progr += ((double)(currentFfmpegCall-1)/(double)totalFfmpegCalls)*100;
+				LOG.debug("Total progress: "+progr);
 			    }			    
 			    
 			    long currentTime = System.currentTimeMillis();
 			    // only log every so many seconds
 			    if( (currentTime - statusLastUpdatedTime) > STATUS_UPDATE_TIME) {
-				_job.setStatus("Progress", progr + "");
+				_job.setStatus("Progress", Double.toString(progr));
 				statusLastUpdatedTime = System.currentTimeMillis(); // setStatus could have taken some time
 			    }
 			}
