@@ -2,8 +2,12 @@ package com.noterik.springfield.momar.TF;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -160,8 +164,12 @@ public class TFactory {
 					inputFile = streamPath + path + File.separator + job.getInputFilename(); 
 					outputDir = streamPath + File.separator + job.getProperty("referid") + File.separator;
 				}
+				
+				LOG.debug("Output dir = "+outputDir);
+				
 				// create output folder
 				if(!(new File(outputDir)).exists()) {
+				    	LOG.debug("Output dir didn't exist yet, create");
 					(new File(outputDir)).mkdirs();
 				}
 			}
@@ -209,21 +217,69 @@ public class TFactory {
 		// ftp files to other streams, and if not local to all streams
 		String[] streams = TFHelper.getStreams(job);
 		for(int i = local ? 1: 0; i<streams.length; i++) {
-			String stream = streams[i];
-			MountProperties mp = LazyHomer.getMountProperties(stream);
-			String server = mp.getHostname();
-			String username = mp.getAccount();
-			String password = mp.getPassword();
-			String rFolder = mp.getPath()+job.getProperty("referid");
-			String lFolder = outputDir;
-			String filename = "raw."+extension;		
-			LOG.debug("sending to server: "+server+", username: "+username+", password: "+password+", rFolder: "+rFolder+", lFolder: "+lFolder+", filename: "+filename);
-			
-			// send
-			boolean ok = FtpHelper.commonsSendFile(server, username, password, rFolder, lFolder, filename);
-			if(!ok) {
-				LOG.error("Could not send file to ftp. " + server + " -- " + job.getProperty("referid"));
+		    String stream = streams[i];
+		    MountProperties mp = LazyHomer.getMountProperties(stream);
+	
+			   
+		    if (mp == null) {
+			System.out.println("Mount properties not set for Momar for mount "+stream);
+			break;
+		    }		   
+		    
+		    //Check for local file
+		    if (mp.getHostname().equals(LazyHomer.myip)) {
+			InputStream is = null;
+			OutputStream os = null;
+			try {
+			    String iFile = outputDir + "raw." + job.getProperty("extension");
+			    String rFile = mp.getPath()+job.getProperty("referid")+File.separator+"raw."+ job.getProperty("extension");
+			    
+			    if (job.getOutputFilename() != null) {
+				iFile = outputDir+job.getOutputFilename();
+				rFile = mp.getPath()+job.getProperty("referid")+File.separator+job.getOutputFilename();
+			    }
+			    
+			    //Create folder
+			    File rPath = new File (mp.getPath()+job.getProperty("referid"));
+			    if (!rPath.exists()) {
+				rPath.mkdirs();
+			    }
+			    
+			    //copy file
+			    is = new FileInputStream(iFile);
+			    os = new FileOutputStream(rFile);
+			    byte[] buffer = new byte[1024];
+			    int length;
+			    while ((length = is.read(buffer)) > 0) {
+				os.write(buffer, 0, length);
+			    }
+			} catch (Exception e) {
+			    LOG.error("Could not copy file to stream "+stream);
+			    LOG.error(e.getMessage());
+			} finally {
+			    try {
+				is.close();
+				os.close();
+			    } catch (Exception e) {
+				LOG.error("Could not copy file to stream "+stream);
+				LOG.error(e.getMessage());
+			    }
 			}
+		    } else {			
+			String server = mp.getHostname();
+        		String username = mp.getAccount();
+        		String password = mp.getPassword();
+        		String rFolder = mp.getPath()+job.getProperty("referid");
+        		String lFolder = outputDir;
+        		String filename = "raw."+extension;		
+        		LOG.debug("sending to server: "+server+", username: "+username+", password: "+password+", rFolder: "+rFolder+", lFolder: "+lFolder+", filename: "+filename);
+        			
+        		// send
+        		boolean ok = FtpHelper.commonsSendFile(server, username, password, rFolder, lFolder, filename);
+        		if(!ok) {
+        			LOG.error("Could not send file to ftp. " + server + " -- " + job.getProperty("referid"));
+        		}
+		    }
 		}
 		
 		// cleanup temporary files

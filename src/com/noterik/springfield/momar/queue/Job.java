@@ -260,7 +260,6 @@ public class Job {
 			LOG.error("",e);
 		}
 		
-		System.out.println("Result of parsing parent - original: "+original+", originalFilename: "+originalFilename+", inputURI: "+inputURI+", inputFilename: "+inputFilename);
 		LOG.debug("Result of parsing parent - original: "+original+", originalFilename: "+originalFilename+", inputURI: "+inputURI+", inputFilename: "+inputFilename);
 
 	}
