@@ -144,7 +144,7 @@ public class QueueManager implements MargeObserver {
 		}
 		
 		// replaces the on momarqueuescripts
-		LazyMarge.addObserver("/domain/"+domain+"/user/*/video/*/rawvideo/*", this);		
+		//LazyMarge.addObserver("/domain/"+domain+"/user/*/video/*/rawvideo/*", this);		
 		return true;
 	}
 	
