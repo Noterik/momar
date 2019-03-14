@@ -237,12 +237,12 @@ public class QueueManager implements MargeObserver {
 		
 		// get service
 		//MargeServer marge = MargeServer.getInstance(); TODO: fix marge caching
-		MargeServer marge = new MargeServer();
+		/*MargeServer marge = new MargeServer();
 		Service service = marge.getService("filesystemmanager", domain);
 		if(service==null) {
 			LOG.error("service was null");
 			return false;
-		}
+		}*/
 		
 		// request queues from filessystem
 		String xml = "<fsxml><properties><depth>1</depth></properties></fsxml>";
