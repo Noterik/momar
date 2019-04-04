@@ -43,7 +43,7 @@ public class TranscoderWorker {
 			try {
 				LOG.debug("TranscoderWorker checking for new jobs");
 				checkForNewJob();
-				Thread.sleep(25000);
+				Thread.sleep(2500);
 			} catch (InterruptedException e) {
 				
 			}
