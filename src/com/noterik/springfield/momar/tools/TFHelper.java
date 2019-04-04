@@ -26,7 +26,7 @@ public class TFHelper {
 	 * @return
 	 */
 	public static boolean isLocalJob(Job job) {
-		 String[] mounts = job.getProperty("mount").split(",");
+		 String[] mounts = job.getProperty("mount") != null ? job.getProperty("mount").split(",") : new String[0];
 		 for(int i =0; i < mounts.length ; i++) {
 			 String name = mounts[i];
 			 MountProperties minfo = LazyHomer.getMountProperties(name);

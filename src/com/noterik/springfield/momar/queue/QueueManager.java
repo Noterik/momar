@@ -188,30 +188,32 @@ public class QueueManager implements MargeObserver {
 				List<Job> jobs = queue.getJobs();
 				for(Job job : jobs) {
 					if(job!=null) {
-						LOG.debug("job found, checking");
-						// check if job is good according to decision engine
-						if(MomarServer.instance().getDecisionEngine().processJob(job)) {
-							// check if 'useraw' has been set
-							LOG.debug("Check if useraw has been set");
-							String useraw = job.getProperty("useraw");
-							if(useraw!=null) {
-								LOG.debug("checking if following rawvideo is available "+useraw);
-								
-								// determine referid
-								String referid = job.getProperty("referid");
-								if(referid==null) {
-									continue;
+						if (job.getStatusProperty("transcoder")==null && job.getStatusProperty("message")==null) { // no transcoder or progress
+							LOG.debug("unprocessed job found, checking");
+							// check if job is good according to decision engine
+							if(MomarServer.instance().getDecisionEngine().processJob(job)) {
+								// check if 'useraw' has been set
+								LOG.debug("Check if useraw has been set");
+								String useraw = job.getProperty("useraw");
+								if(useraw!=null) {
+									LOG.debug("checking if following rawvideo is available "+useraw);
+									
+									// determine referid
+									String referid = job.getProperty("referid");
+									if(referid==null) {
+										continue;
+									}
+									
+									// determine the rawvideo
+									String rawURI = URIParser.getPreviousUri(referid)+"/"+useraw;
+									
+									// check if raw is available
+									if(!checkStatus(rawURI,"done")) {
+										continue;
+									}
 								}
-								
-								// determine the rawvideo
-								String rawURI = URIParser.getPreviousUri(referid)+"/"+useraw;
-								
-								// check if raw is available
-								if(!checkStatus(rawURI,"done")) {
-									continue;
-								}
+								return job;
 							}
-							return job;
 						}
 					}
 				}

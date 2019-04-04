@@ -1,19 +1,11 @@
 package com.noterik.springfield.momar.TF;
 
-import java.io.File;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.log4j.Logger;
-import org.springfield.mojo.interfaces.ServiceInterface;
-import org.springfield.mojo.interfaces.ServiceManager;
 
-import com.noterik.bart.marge.model.Service;
-import com.noterik.bart.marge.server.MargeServer;
 import com.noterik.springfield.momar.MomarServer;
-import com.noterik.springfield.momar.commandrunner.CommandRunner;
-import com.noterik.springfield.momar.homer.LazyHomer;
-import com.noterik.springfield.momar.homer.LazyMarge;
-import com.noterik.springfield.momar.homer.MargeObserver;
-import com.noterik.springfield.momar.homer.MountProperties;
 import com.noterik.springfield.momar.queue.Job;
 import com.noterik.springfield.momar.queue.QueueManager;
 
@@ -28,157 +20,78 @@ import com.noterik.springfield.momar.queue.QueueManager;
  * @version $Id: TranscoderWorker.java,v 1.30 2012-07-31 19:06:36 daniel Exp $
  *
  */
-public class TranscoderWorker implements MargeObserver {
+public class TranscoderWorker {
 	/**	the TranscoderWorker's log4j logger */
 	private static final Logger LOG = Logger.getLogger(TranscoderWorker.class);
 	
-	private boolean busy = false;
+	private boolean running = true;
+	private int busyWorkers = 0;
+	private int numberOfWorkers = 1;
+	
+	ExecutorService executor;
 	
 	/**
 	 * Current executing job
 	 */
-	private Job cJob = null;
+	//private Job cJob = null;
+	
+	public TranscoderWorker(int numberOfWorkers) {
+		this.numberOfWorkers = numberOfWorkers;
+		
+		init();
+		while (running) {
+			try {
+				LOG.debug("TranscoderWorker checking for new jobs");
+				checkForNewJob();
+				Thread.sleep(25000);
+			} catch (InterruptedException e) {
+				
+			}
+		}
+	}
 	
 	public void init() {
-		LOG.info("Starting worker");
+		LOG.info("Starting main transcoder worker");
 		
-		// subscribe to changed on the queue's
-				LazyMarge.addObserver("/domain/webtv/service/momar/queue", this);
-				LazyMarge.addTimedObserver("/domain/webtv/service/momar/queue",6,this);
+		executor = Executors.newFixedThreadPool(numberOfWorkers);
 	}
 	
-	public synchronized boolean checkForNewJob() {
-		// get next job
-		busy = true;
-		
-		QueueManager qm = MomarServer.instance().getQueueManager();
-		if (qm==null) {
-			LOG.info("TranscoderWorker : Queuemanager not found");
-			busy = false;
-			return false;
-		}
-		cJob = qm.getJob();
-		if(cJob!=null) {
-			//System.out.println("TR="+cJob.getStatusProperty("trancoder"));
-			if (cJob.getStatusProperty("trancoder")==null) { // no transcoder
-				
-				LOG.debug("got new job: "+cJob);
-
-				// transcode job
-				boolean success = transcode();
-				LOG.debug("finished transcoding successfully: "+Boolean.toString(success));
+	public void checkForNewJob() {
+		if (busyWorkers < numberOfWorkers) {
+			LOG.debug("TranscoderWorker checking for new job (only "+busyWorkers+" of "+numberOfWorkers+" busy)");
 			
-				// call to job finished
-				jobFinished(success);
+			// get next job
+			QueueManager qm = MomarServer.instance().getQueueManager();
+			if (qm==null) {
+				LOG.info("TranscoderWorker : Queuemanager not found");
+			}
+			Job cJob = qm.getJob();
 			
-				// remove job
-				removeJob();
-				busy = false;
-				return success;
+			if(cJob!=null) {
+				//System.out.println("TR="+cJob.getStatusProperty("trancoder"));
+				if (cJob.getStatusProperty("trancoder")==null) { // no transcoder					
+					LOG.debug("got new job: "+cJob);
+					
+					busyWorkers++;
+					Runnable tfworker = new TFactory(cJob, this);
+					executor.execute(tfworker);
+				} else {
+					System.out.println("JOB TAKEN BY = "+cJob.getStatusProperty("trancoder"));
+				}
 			} else {
-				System.out.println("JOB TAKEN BY = "+cJob.getStatusProperty("trancoder"));
+				LOG.debug("No job found");
 			}
 		} else {
-			LOG.debug("No job found");
-		}
-		busy = false;	
-		return false;
-	}
-	
-	public void remoteSignal(String from,String method,String url) {
-		if (from.equals("localhost") || method.equals("POST")) {
-			if (!busy) {
-				boolean donework = checkForNewJob();
-				while (donework) {
-					donework = checkForNewJob();
-				}
-			}
+			LOG.debug("TranscoderWorker: all workers busy ("+busyWorkers+ " of "+numberOfWorkers+")");
 		}
 	}
-	
-	/**
-	 * Get the current executing job
-	 * 
-	 * @return
-	 */
-	public Job getCurrentJob() {
-		return cJob;
+
+	public void jobFinished() {
+		LOG.debug("TranscoderWorker received a job finished");
+		busyWorkers--;
 	}
 	
-	/**
-	 * Handles the job
-	 * 
-	 * @param job
-	 */
-	public boolean transcode() {
-		// get uri and streams
-		TFactory tf = new TFactory();
-		
-		// set the reencode to false
-		tf.setReencodeToFalse(cJob);
-		
-		// transcode
-		return tf.transcode(cJob);
-	}
-	
-	/**
-	 * Removes job from queue 
-	 * 
-	 * @param job
-	 */
-	public void removeJob() {
-		LOG.debug("removing job: "+cJob);
-		
-		// send delete call
-		ServiceInterface smithers = ServiceManager.getService("smithers");
-		if (smithers==null) return;
-		smithers.delete( cJob.getUri(), null, null);
-		LOG.debug("send delete call to "+cJob.getUri());
-	}
-	
-	/**
-	 * set the properties in the rawvideo after transcoding
-	 * 
-	 * @param job
-	 * @param success
-	 */
-	private void jobFinished(boolean success){
-		LOG.debug("call to jobFinished");
-		
-		// rawvideo uri 
-		String rawUri = cJob.getProperty("referid");
-		
-		// set the transferred property
-		ServiceInterface smithers = ServiceManager.getService("smithers");
-		if (smithers==null) return;
-		String response = smithers.put(rawUri + "/properties/transferred", "false", "text/xml");
-		
-		if (success){				
-			// set the status property to done
-			smithers.put(rawUri + "/properties/status", "done", "text/xml");
-		}else{		
-			// set the status property to fail
-			smithers.put(rawUri + "/properties/status", "failed", "text/xml");
-		}
-		//Check if an additional script is provided to run after the job finished
-		String mount = cJob.getProperty("mount");
-		if (mount.indexOf(",") > -1) {
-			mount = mount.substring(0,mount.indexOf(","));
-		}
-		
-		MountProperties mp = LazyHomer.getMountProperties(mount);
-		String jobFinished = mp.getJobFinished();
-		if (jobFinished != null && !jobFinished.equals("")) {
-			LOG.debug("About to run script "+jobFinished);
-			String batchFilesPath = MomarServer.instance().getConfiguration().getProperty("batchFilesPath");
-			String batchFilesExtension = MomarServer.instance().getConfiguration().getProperty("batchFilesExtension");
-			
-			String filename = cJob.getProperty("filename");
-			String filePath = filename.substring(0, filename.lastIndexOf("/"));
-			
-			String[] cmdArray = new String[] {batchFilesPath+File.separator+jobFinished+batchFilesExtension, filePath};
-			LOG.debug("About to run "+batchFilesPath+File.separator+jobFinished+batchFilesExtension+" "+filePath);
-			CommandRunner.run(cmdArray);
-		}
+	public void destroy() {
+		executor.shutdownNow();
 	}
 }

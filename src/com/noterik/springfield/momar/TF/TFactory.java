@@ -19,6 +19,7 @@ import org.springfield.mojo.interfaces.ServiceInterface;
 import org.springfield.mojo.interfaces.ServiceManager;
 
 import com.noterik.springfield.momar.MomarServer;
+import com.noterik.springfield.momar.commandrunner.CommandRunner;
 import com.noterik.springfield.momar.homer.LazyHomer;
 import com.noterik.springfield.momar.homer.MountProperties;
 import com.noterik.springfield.momar.queue.Job;
@@ -38,7 +39,7 @@ import com.noterik.springfield.momar.tools.TFHelper;
  * @version $Id: TFactory.java,v 1.62 2012-07-31 19:06:36 daniel Exp $
  *
  */
-public class TFactory {
+public class TFactory implements Runnable {
 	/** The TFactory's log4j Logger */
 	private static final Logger LOG = Logger.getLogger(TFactory.class);
 	
@@ -74,6 +75,8 @@ public class TFactory {
 	/** current ffmpeg call being handled */
 	private int currentFfmpegCall;
 	
+	private TranscoderWorker transcoderWorker;
+	
 	// load static variables for the configuration
 	static {
 		ffmpegPath = MomarServer.instance().getConfiguration().getProperty("ffmpeg-path");
@@ -83,8 +86,24 @@ public class TFactory {
 	}
 	
 	private long statusLastUpdatedTime;
-	public TFactory(){
+	public TFactory(Job job, TranscoderWorker transcoderWorker){
 		statusLastUpdatedTime = 0;
+		this._job = job;
+		this.transcoderWorker = transcoderWorker;
+	}
+	
+	@Override
+	public void run() {
+		LOG.info(Thread.currentThread().getName() +" starting with job "+_job.getInputFilename());
+		
+		setReencodeToFalse(_job);
+		boolean success  = transcode(_job);
+		// call to job finished
+		jobFinished(success);
+		removeJob();
+		LOG.info(Thread.currentThread().getName() +" finished with job "+_job.getInputFilename());
+		transcoderWorker.jobFinished();
+		
 	}
 	
 	/**
@@ -183,9 +202,10 @@ public class TFactory {
 				String originalDuration = job.getOriginalProperty("duration") != null ? job.getOriginalProperty("duration") : "1";
 				String originalExtension = job.getOriginalProperty("extension") != null ? job.getOriginalProperty("extension") : "unknown";
 				String originalFramerate = job.getOriginalProperty("framerate") != null ? job.getOriginalProperty("framerate") : "25";
+				String outputFilename = job.getOutputFilename() != null ? "temp_" + job.getOutputFilename() : "raw." + job.getProperty("extension");
 				
-				String[] cmdArray = new String[] {batchFilesPath+File.separator+batchfile, ffmpegPath+File.separator, inputFile, job.getProperty("wantedwidth"), job.getProperty("wantedheight"), job.getProperty("wantedbitrate"), job.getProperty("wantedframerate"), job.getProperty("wantedaudiobitrate"), outputDir, job.getProperty("extension"), tempPath, job.getId(), job.getOriginalProperty("width"), job.getOriginalProperty("height"), originalBitrate, originalDuration, originalExtension, originalFramerate};
-				LOG.debug("command: "+batchFilesPath+File.separator+batchfile+" "+ffmpegPath+File.separator+" "+inputFile+" "+job.getProperty("wantedwidth")+" "+job.getProperty("wantedheight")+" "+job.getProperty("wantedbitrate")+" "+job.getProperty("wantedframerate")+" "+job.getProperty("wantedaudiobitrate")+" "+outputDir+" "+job.getProperty("extension")+" "+tempPath+" "+job.getId()+" "+job.getOriginalProperty("width")+" "+job.getOriginalProperty("height")+" "+originalBitrate+" "+originalDuration+" "+originalExtension+" "+originalFramerate);
+				String[] cmdArray = new String[] {batchFilesPath+File.separator+batchfile, ffmpegPath+File.separator, inputFile, job.getProperty("wantedwidth"), job.getProperty("wantedheight"), job.getProperty("wantedbitrate"), job.getProperty("wantedframerate"), job.getProperty("wantedaudiobitrate"), outputDir, job.getProperty("extension"), tempPath, job.getId(), job.getOriginalProperty("width"), job.getOriginalProperty("height"), originalBitrate, originalDuration, originalExtension, originalFramerate, outputFilename};
+				LOG.debug("command: "+batchFilesPath+File.separator+batchfile+" "+ffmpegPath+File.separator+" "+inputFile+" "+job.getProperty("wantedwidth")+" "+job.getProperty("wantedheight")+" "+job.getProperty("wantedbitrate")+" "+job.getProperty("wantedframerate")+" "+job.getProperty("wantedaudiobitrate")+" "+outputDir+" "+job.getProperty("extension")+" "+tempPath+" "+job.getId()+" "+job.getOriginalProperty("width")+" "+job.getOriginalProperty("height")+" "+originalBitrate+" "+originalDuration+" "+originalExtension+" "+originalFramerate +" "+ outputFilename);
 				
 				File bFile = new File(batchFilesPath+File.separator+batchfile);
 				if (!bFile.exists()) {
@@ -196,12 +216,18 @@ public class TFactory {
 				
 				this.commandRunner(cmdArray);
 			
-				if(new File(outputDir + "raw." + job.getProperty("extension")).isFile()){
-					// TODO: check filesize after transcode
-					if (job.getOutputFilename() != null) {
-						new File(outputDir + "raw." + job.getProperty("extension")).renameTo(new File(outputDir+job.getOutputFilename()));
-					}					
-					LOG.debug("Transcoding finished (mp4).");
+				if(new File(outputDir + outputFilename).isFile()){
+					// check filesize after transcode
+					if (new File(outputDir + outputFilename).length() > 0) {
+						//rename temp file to final filename
+						if (job.getOutputFilename() != null) {
+							new File(outputDir + "temp_"+job.getOutputFilename()).renameTo(new File(outputDir+job.getOutputFilename()));
+						}						
+						LOG.debug("Transcoding finished (mp4).");
+					} else {
+						job.setError("Error", "Transcoding Failed MP4 (empty file)");
+						return false;
+					}
 				}else{
 					job.setError("Error", "Transcoding Failed MP4");
 					return false;
@@ -596,5 +622,66 @@ public class TFactory {
 				statusLastUpdatedTime = System.currentTimeMillis(); // setStatus could have taken some time
 			}
 		}
+	}
+	
+	/**
+	 * set the properties in the rawvideo after transcoding
+	 * 
+	 * @param job
+	 * @param success
+	 */
+	private void jobFinished(boolean success){
+		LOG.debug("call to jobFinished");
+		
+		// rawvideo uri 
+		String rawUri = _job.getProperty("referid");
+		
+		// set the transferred property
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		String response = smithers.put(rawUri + "/properties/transferred", "false", "text/xml");
+		
+		if (success){				
+			// set the status property to done
+			smithers.put(rawUri + "/properties/status", "done", "text/xml");
+		}else{		
+			// set the status property to fail
+			smithers.put(rawUri + "/properties/status", "failed", "text/xml");
+		}
+		//Check if an additional script is provided to run after the job finished
+		String mount = _job.getProperty("mount");
+		if (mount.indexOf(",") > -1) {
+			mount = mount.substring(0,mount.indexOf(","));
+		}
+		
+		MountProperties mp = LazyHomer.getMountProperties(mount);
+		String jobFinished = mp.getJobFinished();
+		if (jobFinished != null && !jobFinished.equals("")) {
+			LOG.debug("About to run script "+jobFinished);
+			String batchFilesPath = MomarServer.instance().getConfiguration().getProperty("batchFilesPath");
+			String batchFilesExtension = MomarServer.instance().getConfiguration().getProperty("batchFilesExtension");
+			
+			String filename = _job.getProperty("filename");
+			String filePath = filename.substring(0, filename.lastIndexOf("/"));
+			
+			String[] cmdArray = new String[] {batchFilesPath+File.separator+jobFinished+batchFilesExtension, filePath};
+			LOG.debug("About to run "+batchFilesPath+File.separator+jobFinished+batchFilesExtension+" "+filePath);
+			CommandRunner.run(cmdArray);
+		}
+	}
+	
+	/**
+	 * Removes job from queue 
+	 * 
+	 * @param job
+	 */
+	public void removeJob() {
+		LOG.debug("removing job: "+_job);
+		
+		// send delete call
+		ServiceInterface smithers = ServiceManager.getService("smithers");
+		if (smithers==null) return;
+		smithers.delete( _job.getUri(), null, null);
+		LOG.debug("send delete call to "+_job.getUri());
 	}
 }

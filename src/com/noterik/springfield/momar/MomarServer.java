@@ -11,6 +11,10 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.log4j.Logger;
 import org.dom4j.Document;
@@ -61,8 +65,8 @@ public class MomarServer {
 	/** The queue manager */
 	private QueueManager qm;
 	
-	/** An array of transcoder threads */
-	private TranscoderWorker[] workers;
+	/** transcoder worker */
+	private TranscoderWorker worker;
 	
 	/** Decision Engine, which determines which jobs should be picked up by this momar */
 	private DecisionEngine dEngine;
@@ -199,8 +203,7 @@ public class MomarServer {
 			dEngine = DEFAULT_DECISION_ENGINE;
 		}
 		LOG.info("Initializing decesion engine done.");
-	}
-	
+	}	
 	
 	/**
 	 * Returns a list of domains that this Momar is serving
@@ -211,8 +214,7 @@ public class MomarServer {
 			List<String> domains = new ArrayList<String>();
 			domains.add("webtv");
 			return domains;
-	}
-	
+	}	
 
 	/**
 	 * Initializes the queue manager
@@ -259,36 +261,18 @@ public class MomarServer {
 			System.out.println("Could not load number of worker threads from configuration, switching to default (1).");
 		}		
 		LOG.info("number of workers: " + numberOfWorkers);
-		
-		// create workers array
-		workers = new TranscoderWorker[numberOfWorkers];
 
-		// setup new workers and start them
-		for(int i=0; i<numberOfWorkers; i++) {
-			workers[i] = new TranscoderWorker();
-			workers[i].init();
-		}
+		worker = new TranscoderWorker(numberOfWorkers);
+		LOG.info("Worker hascode = "+worker.hashCode());
 		
 		LOG.info("Initializing workers done.");
 	}
-	
-    
-    /**
-     * Checks if the workers are currently processing this job
-     */
-    public boolean runningJob(Job job) {
-    	for(TranscoderWorker worker : workers) {
-    		if(job.equals(worker.getCurrentJob())) {
-    			return true;
-    		}
-    	}
-    	return false;
-    }
 
     /**
      * Shutdown
      */
 	public void destroy() {
+		worker.destroy();
 		qm.destroy();
 		instance = null;
 		running = false;
