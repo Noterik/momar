@@ -129,6 +129,7 @@ public class Job {
 				properties.put(child.getName(), child.getText());
 				if (child.getName().equals("error") && child.getText().equals("Dead link!")) {
 					//non valid job - refer invalid
+					LOG.error("Job found dead link for "+uri+" in "+xml);
 					return;
 				}
 			}
@@ -143,6 +144,7 @@ public class Job {
 			properties.put("referid", referid);
 		} else {
 			//non valid job
+			LOG.error("Job rawvideo has no referid for "+uri+" in "+xml);
 			return;
 		}
 		

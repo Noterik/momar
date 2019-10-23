@@ -143,7 +143,8 @@ public class Queue implements Comparable<Queue> {
 					jobs.add(job);
 				} else {
 					//remove invalid job
-					removeJob(job);
+					LOG.error("Found invalid job "+job.toString());
+					//removeJob(job);
 				}
 			}
 			

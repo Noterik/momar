@@ -187,7 +187,7 @@ public class QueueManager implements MargeObserver {
 			for(Queue queue : queues) {
 				List<Job> jobs = queue.getJobs();
 				for(Job job : jobs) {
-					if(job!=null) {
+					if(job!=null && job.isValidJob()) {
 						if (job.getStatusProperty("transcoder")==null && job.getStatusProperty("message")==null) { // no transcoder or progress
 							LOG.debug("unprocessed job found, checking");
 							// check if job is good according to decision engine

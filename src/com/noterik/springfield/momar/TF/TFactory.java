@@ -502,6 +502,7 @@ public class TFactory implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
+			LOG.info("Interruption exception received for "+Thread.currentThread().getName());
 			e.printStackTrace();
 		}
 	}

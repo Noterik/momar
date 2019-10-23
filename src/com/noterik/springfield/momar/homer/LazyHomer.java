@@ -175,10 +175,20 @@ public class LazyHomer implements MargeObserver {
 						momars.put(ipnumber, mp);
 
 					}
+
 					mp.setIpNumber(ipnumber);
 					mp.setName(name);
 					mp.setStatus(status);
-					mp.setDecisionEngine(child.selectSingleNode("properties/decisionengine").getText());
+					
+					String decisionengine = "com.noterik.springfield.momar.queue.dist.SimpleDecisionEngine";
+					if (child.selectSingleNode("properties/decision-engine") != null) {
+						decisionengine = child.selectSingleNode("properties/decision-engine").getText();
+					}
+					if (child.selectSingleNode("properties/decisionengine") != null) {
+						decisionengine = child.selectSingleNode("properties/decisionengine").getText();
+					}
+
+					mp.setDecisionEngine(decisionengine);
 					mp.setNumberOfWorkers(child.selectSingleNode("properties/numberofworkers").getText());
 					mp.setDefaultLogLevel(child.selectSingleNode("properties/defaultloglevel").getText());
 					mp.setPreferedSmithers(child.selectSingleNode("properties/preferedsmithers").getText());
@@ -222,7 +232,7 @@ public class LazyHomer implements MargeObserver {
 		        	newbody+="<activesmithers>"+selectedsmithers.getIpNumber()+"</activesmithers>";
 		        	newbody+="<lastseen>"+new Date().getTime()+"</lastseen>";
 		        	newbody+="<preferedsmithers>"+myip+"</preferedsmithers>";
-		        	newbody+="<decisionengine>com.noterik.springfield.momar.queue.dist.OfferDecisionEngine</decisionengine>";
+		        	newbody+="<decision-engine>com.noterik.springfield.momar.queue.dist.OfferDecisionEngine</decisionengine>";
 		        	if (isWindows()) {
 		        		newbody+="<numberofworkers>1</numberofworkers>";
 		        		newbody+="<defaultloglevel>info</defaultloglevel>";
